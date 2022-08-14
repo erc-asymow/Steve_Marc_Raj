@@ -5,6 +5,7 @@
 #include "TLatex.h"
 #include "Math/Vector4D.h"
 #include "TStyle.h"
+#include <string>
 
 using namespace ROOT;
 using namespace ROOT::VecOps;
@@ -38,11 +39,10 @@ float deltaR(float eta1, float phi1, float eta2, float phi2) {
   return std::sqrt(deltaR2(eta1,phi1,eta2,phi2));
 }
 
-RVec<Int_t> CreateProbes_Muon(RVec<Float_t> &Muon_pt, RVec<Float_t> &Muon_standalonePt,RVec<Float_t> &Muon_eta,RVec<Float_t> &Muon_phi,RVec<Int_t> &Muon_charge, RVec<Bool_t> &Muon_mediumId, RVec<Float_t> &Muon_dxybs,RVec<Bool_t> &Muon_isGlobal){
+RVec<Int_t> CreateProbes_Muon(RVec<Float_t> &Muon_pt, RVec<Float_t> &Muon_standalonePt,RVec<Float_t> &Muon_eta,RVec<Float_t> &Muon_phi, RVec<Float_t> &Muon_standaloneEta, RVec<Float_t> &Muon_standalonePhi, RVec<Int_t> &Muon_charge, RVec<Bool_t> &Muon_mediumId, RVec<Float_t> &Muon_dxybs,RVec<Bool_t> &Muon_isGlobal){
   RVec<Int_t> Probe_Muons;
   for(int i=0;i<Muon_pt.size();i++){
-    if(Muon_pt.at(i) < 15 || Muon_standalonePt.at(i) < 15 || abs(Muon_eta.at(i)) > 2.4 || !Muon_mediumId.at(i) 
-	|| abs(Muon_dxybs.at(i)) > 0.05 || !Muon_isGlobal.at(i)) continue;
+    if(Muon_pt.at(i) < 15 || Muon_standalonePt.at(i) < 15 || abs(Muon_eta.at(i)) > 2.4 || !Muon_isGlobal.at(i) || deltaR(Muon_eta.at(i),Muon_phi.at(i),Muon_standaloneEta.at(i),Muon_standalonePhi.at(i))>0.3) continue;
     //Probe probe_muon;
     //probe_muon.pt = Muon_pt.at(i);
     //probe_muon.eta = Muon_eta.at(i);
@@ -68,6 +68,23 @@ RVec<Int_t> CreateProbes_Track(RVec<Float_t> &Track_pt, RVec<Float_t> &Track_eta
     Probe_Tracks.push_back(i);
   }
   return Probe_Tracks;
+
+}
+
+RVec<Int_t> CreateProbes_MergedStandMuons(RVec<Float_t> &MergedStandAloneMuon_pt, RVec<Float_t> &MergedStandAloneMuon_eta, RVec<Float_t> &MergeStandAloneMuon_phi){
+
+  RVec<Int_t> Probe_Stand;
+  for(int i=0;i<MergedStandAloneMuon_pt.size();i++){
+    if(MergedStandAloneMuon_pt.at(i) < 15.) continue;
+    //Probe probe_track;
+    //probe_track.pt = Track_pt.at(i);
+    //probe_track.eta = Track_eta.at(i);
+    //probe_track.phi = Track_phi.at(i);
+    //probe_track.charge = Track_charge.at(i);
+    //probe_track.original_index = i;
+    Probe_Stand.push_back(i);
+  }
+  return Probe_Stand;
 
 }
 
@@ -237,6 +254,19 @@ RVec<Bool_t> getVariables(RVec<std::pair<int,int>> TPPairs, RVec<Bool_t> &Cand_v
   return Variables;
 }
 
+RVec<Float_t> zqtprojection(RVec<std::pair<int,int>> &TPPairs, RVec<Float_t> &Muon_pt, RVec<Float_t> &Muon_eta, RVec<Float_t> &Muon_phi) {
+  RVec<Float_t> v;
+  for (int i=0;i<TPPairs.size();i++){
+    std::pair<int,int> TPPair = TPPairs.at(i);
+    TLorentzVector tag, probe;
+    tag.SetPtEtaPhiM(Muon_pt[TPPair.first],Muon_eta[TPPair.first],Muon_phi[TPPair.first],0.);
+    probe.SetPtEtaPhiM(Muon_pt[TPPair.second],Muon_eta[TPPair.second],Muon_phi[TPPair.second],0.);
+    TVector3 Tag(tag.Px(),tag.Py(),0.), Probe(probe.Px(), probe.Py(), 0.);
+    v.emplace_back((Tag+Probe).Dot(Probe)/sqrt(Probe.Dot(Probe)));
+  }
+  return v;
+}
+
 RVec<Bool_t> isOS(RVec<std::pair<int,int>> TPPairs,RVec<Int_t> Muon_charge, RVec<Int_t> Cand_charge){
   RVec<Bool_t> isOS;
   for (int i=0;i<TPPairs.size();i++){
@@ -244,12 +274,26 @@ RVec<Bool_t> isOS(RVec<std::pair<int,int>> TPPairs,RVec<Int_t> Muon_charge, RVec
     int  tag_index = TPPair.first;
     int probe_index = TPPair.second;
     bool os = false;
-    if (Muon_charge[tag_index] == Cand_charge[probe_index]) os = true;
+    if (Muon_charge[tag_index] != Cand_charge[probe_index]) os = true; //initially ==. We want this to return true for opposite sign pairs, right?
     isOS.push_back(os);
   }
   return isOS;
 }
 
+RVec<Bool_t> Probe_isGlobal(RVec<std::pair<int,int>> &TPPairs, RVec<Int_t> &MergedStandAloneMuon_extraIdx, RVec<Int_t> &Muon_standaloneExtraIdx, RVec<Bool_t> &Muon_isGlobal, RVec<Float_t> &Muon_pt, RVec<Float_t> &Muon_eta, RVec<Float_t> &Muon_phi, RVec<Float_t> &Muon_standalonePt, RVec<Float_t> &Muon_standaloneEta, RVec<Float_t> &Muon_standalonePhi) {
+  RVec<Bool_t> isGlobal;
+  for (auto i=0U; i<TPPairs.size(); i++) {
+    std::pair<int,int> TPPair = TPPairs.at(i);
+    int  tag_index = TPPair.first;
+    int probe_index = TPPair.second;
+    bool condition=false;
+    for (auto j=0U; j<Muon_standaloneExtraIdx.size(); j++) {
+      if ((MergedStandAloneMuon_extraIdx[probe_index]==Muon_standaloneExtraIdx[j])&&(Muon_isGlobal[j])&&(Muon_pt[j]>15.)&&(Muon_standalonePt[j]>15.)&&(deltaR(Muon_eta[j],Muon_phi[j],Muon_standaloneEta[j],Muon_standalonePhi[j]))) condition=true;
+    }
+    isGlobal.push_back(condition);
+  }
+  return isGlobal;
+}
 
 
 float clipGenWeight(float genWeight){
@@ -323,3 +367,25 @@ public:
 private:
   std::shared_ptr<jsonmap_t> jsonmap_;
 };
+
+void saveHistograms(ROOT::RDF::RResultPtr<THnT<double> > histo_pass, ROOT::RDF::RResultPtr<THnT<double> > histo_fail, std::string output_file) {
+  THnD Histo_pass=*(THnD*)histo_pass.GetPtr()->Clone();
+  THnD Histo_fail=*(THnD*)histo_fail.GetPtr()->Clone();
+  size_t found = output_file.find(std::string(".root"));
+  for (unsigned int i=1; i<=Histo_pass.GetAxis(4)->GetNbins(); i++) {
+	std::string newoutputname(output_file.substr(0,found));
+    newoutputname+=std::string("_")+std::to_string(i)+std::string(".root");
+    TFile f_out(newoutputname.c_str(),"RECREATE");
+    Histo_pass.GetAxis(4)->SetRange(i,i);
+    TH3D* histo_pass=(TH3D*)Histo_pass.Projection(0,1,2);
+    histo_pass->SetName(Histo_pass.GetName());
+    histo_pass->Write();
+    delete histo_pass;
+    Histo_fail.GetAxis(4)->SetRange(i,i);
+    TH3D* histo_fail=(TH3D*)Histo_fail.Projection(0,1,2);
+    histo_fail->SetName(Histo_fail.GetName());
+    histo_fail->Write();
+    delete histo_fail;
+    f_out.Close();
+  }
+}

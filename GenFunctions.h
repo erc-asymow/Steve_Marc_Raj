@@ -83,7 +83,7 @@ void insert( std::vector<std::pair<double,int> > &cont, std::pair<double,int> va
     cont.insert( it, value );
 }
 
-RVec<float> goodgenvalue(RVec<float> &GenPart_pt, int &GenPart_postFSRLepIdx1, int &GenPart_postFSRLepIdx2, RVec<float> &GenPart_eta, RVec<float> &GenPart_phi, RVec<int> &GenPart_status, RVec<int> &GenPart_pdgId) {
+RVec<float> goodgenvalue(RVec<float> &GenPart_pt, int GenPart_postFSRLepIdx1, int GenPart_postFSRLepIdx2, RVec<float> &GenPart_eta, RVec<float> &GenPart_phi, RVec<int> &GenPart_status, RVec<int> &GenPart_pdgId) {
 	RVec<float> v;
 	for (auto i=0U;i < GenPart_pt.size(); ++i) {
 		if (((i==GenPart_postFSRLepIdx1)||(i==GenPart_postFSRLepIdx2))&&(abs(GenPart_pdgId[i])==13)) {
@@ -103,7 +103,27 @@ RVec<float> goodgenvalue(RVec<float> &GenPart_pt, int &GenPart_postFSRLepIdx1, i
 	return v;
 }
 
-RVec<int> goodgenidx(RVec<float> &GenPart_pt, int &GenPart_postFSRLepIdx1, int &GenPart_postFSRLepIdx2, RVec<float> &GenPart_eta, RVec<float> &GenPart_phi, RVec<int> &GenPart_status, RVec<int> &GenPart_pdgId) {
+RVec<int> goodgencharge(int GenPart_postFSRLepIdx1, int GenPart_postFSRLepIdx2, RVec<float> &GenPart_eta, RVec<float> &GenPart_phi, RVec<int> &GenPart_status, RVec<int> &GenPart_pdgId) {
+	RVec<int> v;
+	for (auto i=0U;i < GenPart_eta.size(); ++i) {
+		if (((i==GenPart_postFSRLepIdx1)||(i==GenPart_postFSRLepIdx2))&&(abs(GenPart_pdgId[i])==13)) {
+			bool condition=true;
+			for (auto j=0U; j < GenPart_eta.size(); ++j) {
+				if (i==j) continue;
+				if (GenPart_status[j]!=1) continue;
+				if (!(((j==GenPart_postFSRLepIdx1)||(j==GenPart_postFSRLepIdx2))&&(abs(GenPart_pdgId[j])==13))) continue;
+				TLorentzVector cand1, cand2;
+				cand1.SetPtEtaPhiM(3.,GenPart_eta[i],GenPart_phi[i],0.);
+				cand2.SetPtEtaPhiM(3.,GenPart_eta[j],GenPart_phi[j],0.);
+				if (cand1.DeltaR(cand2)<0.3) condition=false;
+			}
+			if (condition) v.emplace_back(-GenPart_pdgId[i]/abs(GenPart_pdgId[i]));
+		}
+	}
+	return v;
+}
+
+RVec<int> goodgenidx(RVec<float> &GenPart_pt, int GenPart_postFSRLepIdx1, int GenPart_postFSRLepIdx2, RVec<float> &GenPart_eta, RVec<float> &GenPart_phi, RVec<int> &GenPart_status, RVec<int> &GenPart_pdgId) {
 	RVec<int> v;
 	for (auto i=0U;i < GenPart_pt.size(); ++i) {
 		if (((i==GenPart_postFSRLepIdx1)||(i==GenPart_postFSRLepIdx2))&&(abs(GenPart_pdgId[i])==13)) {
@@ -167,7 +187,7 @@ RVec<bool> goodmuonreco(RVec<float> &goodgeneta, RVec<float> &goodgenphi, RVec<f
   for (auto i=0U;i < goodgeneta.size(); ++i) {
     std::vector<std::pair<double,int> > Map;
     for (auto j=0U; j < MergedStandAloneMuon_eta.size(); ++j) {
-      TLorentzVector cand, cand2;
+        TLorentzVector cand, cand2;
       cand.SetPtEtaPhiM(5.,goodgeneta[i],goodgenphi[i],0.);
       cand2.SetPtEtaPhiM(5.,MergedStandAloneMuon_eta[j],MergedStandAloneMuon_phi[j],0.);
       insert(Map,{cand.DeltaR(cand2),j});
@@ -269,6 +289,22 @@ RVec<bool> goodmuonisolation(RVec<float> &goodgeneta, RVec<float> &goodgenphi, R
       else v.emplace_back(0);
     }
     else v.emplace_back(0); 
+  }
+  return v;
+}
+
+RVec<float> postFSRgenzqtprojection(RVec<float> &goodgenpt, RVec<float> &goodgeneta, RVec<float> &goodgenphi) {
+  RVec<float> v;
+  for (auto i=0U; i<goodgenpt.size(); i++) {
+    TLorentzVector probe;
+    probe.SetPtEtaPhiM(goodgenpt[i],goodgeneta[i],goodgenphi[i],0.);
+    for (auto j=0U; j<goodgenpt.size(); j++) {
+      if (i==j) continue;
+      TLorentzVector tag;
+      tag.SetPtEtaPhiM(goodgenpt[j],goodgeneta[j],goodgenphi[j],0.);
+      TVector3 Tag(tag.Px(),tag.Py(),0.), Probe(probe.Px(),probe.Py(),0.);
+      v.emplace_back((Tag+Probe).Dot(Probe)/sqrt(Probe.Dot(Probe)));
+    }
   }
   return v;
 }

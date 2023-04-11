@@ -66,6 +66,8 @@ if __name__ == "__main__":
                         help="Don't require opposite charges between tag and probe (including tracking, unless also using --noOppositeChargeTracking)")
     parser.add_argument(        "--noOppositeChargeTracking", action="store_true",
                                 help="Don't require opposite charges between tag and probe for tracking")
+    parser.add_argument("-sc", "--SameCharge", action="store_true", help="Require the TP Pair to have same sign (fo bkg study)",
+                        default=False)
     parser.add_argument('-s','--steps', default=None, nargs='*', type=int, choices=list(workingPoints.keys()),
                         help='Default runs all working points, but can choose only some if needed')
     parser.add_argument('-x','--exclude', default=None, nargs='*', type=int, choices=list(workingPoints.keys()),
@@ -146,6 +148,8 @@ if __name__ == "__main__":
                         cmd += " -nos"
                     if args.noOppositeChargeTracking and wp == 2:
                         cmd += " --noOppositeChargeTracking "
+                    if args.SameCharge:
+                        cmd += " --SameCharge"
                     print("")
                     eventParityText = "all" if parity == 0 else "odd" if parity < 0 else "even"
                     print(f"Running for {xrun} and {step} efficiency ({eventParityText} events)")

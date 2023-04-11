@@ -100,6 +100,9 @@ parser.add_argument('-nw', '--noVertexPileupWeight', action='store_true', help='
 parser.add_argument("-nos", "--noOppositeCharge", action="store_true", help="Don't require opposite charges between tag and probe (including tracking, unless also using --noOppositeChargeTracking)")
 parser.add_argument(        "--noOppositeChargeTracking", action="store_true", help="Don't require opposite charges between tag and probe for tracking")
 
+parser.add_argument("-sc", "--SameCharge", action="store_true", help="Require the TP Pair to have same sign (fo bkg study)",
+                     default=False)
+
 parser.add_argument("-zqt","--zqtprojection", action="store_true", help="Efficiencies evaluated as a function of zqtprojection (only for trigger and isolation)")
 
 parser.add_argument("-gen","--genLevelEfficiency", action="store_true", help="Compute MC truth efficiency")
@@ -198,6 +201,14 @@ elif args.eventParity > 0:
 doOS = 0 if args.noOppositeCharge else 1
 doOStracking = 0 if args.noOppositeChargeTracking else doOS
 
+SS = 1 if args.SameCharge else 0
+
+if doOS & SS:
+    raise Exception("Both doOS and SS can't be True. Require noOppositeCharge if you really want the Same Sign")
+
+if doOStracking & SS:
+    raise Exception("Both doOStracking and SS can't be True. Require noOppositeChargeTracking if you rally want Same Sign")
+
 if (args.isData == 1):
     jsonhelper = make_jsonhelper("Cert_271036-284044_13TeV_Legacy2016_Collisions16_JSON.txt")
     d = d.Filter(jsonhelper,["run","luminosityBlock"],"jsonfilter")
@@ -288,7 +299,7 @@ if(args.efficiency == 1):
         d = d.Define("goodStandaloneMuon", f"MergedStandAloneMuon_pt > 15 && MergedStandAloneMuon_numberOfValidHits >= {minStandaloneNumberOfValidHits}")
         d = d.Define("passCondition_reco", "trackStandaloneDR(Track_eta, Track_phi, MergedStandAloneMuon_eta[goodStandaloneMuon], MergedStandAloneMuon_phi[goodStandaloneMuon]) < 0.3")
         
-        d = d.Define("All_TPPairs", f"CreateTPPair(Tag_Muons, Probe_Tracks, {doOS}, Tag_charge, Track_charge, Tag_inExtraIdx, Track_extraIdx)")
+        d = d.Define("All_TPPairs", f"CreateTPPair(Tag_Muons, Probe_Tracks, {doOS}, Tag_charge, Track_charge, Tag_inExtraIdx, Track_extraIdx, 0, {SS})")
         d = d.Define("All_TPmass", "getTPmass(All_TPPairs, Tag_pt, Tag_eta, Tag_phi, Track_pt, Track_eta, Track_phi)")
         d = d.Define("All_absDiffZ", "getTPabsDiffZ(All_TPPairs, Tag_Z, Track_Z)")
         
@@ -348,7 +359,7 @@ elif (args.efficiency == 2):
         # All probes, standalone muons from MergedStandAloneMuon_XX    
         d = d.Define("Probe_MergedStandMuons",f"MergedStandAloneMuon_pt > 15 && abs(MergedStandAloneMuon_eta) < 2.4 && isGenMatchedMergedStandMuon && MergedStandAloneMuon_numberOfValidHits >= {minStandaloneNumberOfValidHits}")
         #
-        d = d.Define("All_TPPairs", f"CreateTPPair(Tag_Muons, Probe_MergedStandMuons, {doOStracking}, Tag_charge, MergedStandAloneMuon_charge, Tag_outExtraIdx, MergedStandAloneMuon_extraIdx)")
+        d = d.Define("All_TPPairs", f"CreateTPPair(Tag_Muons, Probe_MergedStandMuons, {doOStracking}, Tag_charge, MergedStandAloneMuon_charge, Tag_outExtraIdx, MergedStandAloneMuon_extraIdx, 0, {SS})")
         d = d.Define("All_TPmass","getTPmass(All_TPPairs, Tag_pt, Tag_eta, Tag_phi, MergedStandAloneMuon_pt, MergedStandAloneMuon_eta, MergedStandAloneMuon_phi)")
 
         massLow  =  50
@@ -442,7 +453,7 @@ elif args.efficiency != 7:
     d = d.Define("globalMuon_standaloneNvalidHits", "getGlobalMuon_MergedStandAloneMuonVar(Muon_standaloneExtraIdx, MergedStandAloneMuon_extraIdx, MergedStandAloneMuon_numberOfValidHits)")
     d = d.Define("BasicProbe_Muons", f"Muon_isGlobal && Muon_pt > 24 && Muon_standalonePt > 15 && abs(Muon_eta) < 2.4 && selfDeltaR(Muon_eta, Muon_phi, Muon_standaloneEta, Muon_standalonePhi) < 0.3 && Muon_highPurity && isGenMatchedMuon {chargeCut} && globalMuon_standaloneNvalidHits >= {minStandaloneNumberOfValidHits}")
     # add MergedStandAloneMuon_numberOfValidHits > 0 matching the global muon to its standalone one 
-    d = d.Define("All_TPPairs", f"CreateTPPair(Tag_Muons, BasicProbe_Muons, {doOS}, Tag_charge, Muon_charge, Tag_inExtraIdx, Muon_innerTrackExtraIdx, 1)") # these are all Muon_XX, so might just exclude same index in the loop
+    d = d.Define("All_TPPairs", f"CreateTPPair(Tag_Muons, BasicProbe_Muons, {doOS}, Tag_charge, Muon_charge, Tag_inExtraIdx, Muon_innerTrackExtraIdx, 1, {SS})") # these are all Muon_XX, so might just exclude same index in the loop
     d = d.Define("All_TPmass","getTPmass(All_TPPairs, Tag_pt, Tag_eta, Tag_phi, Muon_pt, Muon_eta, Muon_phi)")
     massLow  =  60
     massHigh = 120

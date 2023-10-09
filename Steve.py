@@ -68,10 +68,12 @@ def make_jsonhelper(filename):
 parser = argparse.ArgumentParser()
 
 parser.add_argument("-e","--efficiency",
-		    help="1 for reco, 2 for \"tracking\", 3 for idip, 4 for trigger, 5 for isolation, 6 for isolation without trigger, 7 for veto",
-                    type=int, choices=range(1,8))
-parser.add_argument("-i","--input_path", help="path of the input root files",
-                    type=str)
+		    help="1 for reco, 2 for \"tracking\", 3 for idip, 4 for trigger, 5 for isolation, 6 for isolation without trigger, 7 for veto, 8 for isolation with failing trigger",
+                    type=int, choices=range(1,9))
+
+#parser.add_argument("-i","--input_path", help="path of the input root files", type=str)
+
+parser.add_argument("-i","--input_path", nargs='+', default=[], help="path of the input root files")
 
 parser.add_argument("-o","--output_file", help="name of the output root file",
                     type=str)
@@ -137,10 +139,11 @@ else:
 
 files=[]
 
-for root, dirnames, filenames in os.walk(args.input_path):
-     for filename in filenames:
-          if '.root' in filename:
-              files.append(os.path.join(root, filename))
+for i in range(len(args.input_path)):
+    for root, dirnames, filenames in os.walk(args.input_path[i]):
+        for filename in filenames:
+            if '.root' in filename:
+                files.append(os.path.join(root, filename))
 
 
 if args.charge and args.efficiency in [2]:
@@ -156,11 +159,13 @@ for name in files: filenames.push_back(name)
 
 d = ROOT.RDataFrame("Events",filenames )
 
+masshighut = 200
+
 binning_pt = array('d',[24., 26., 28., 30., 32., 34., 36., 38., 40., 42., 44., 47., 50., 55., 60., 65.])
 binning_eta = array('d',[round(-2.4 + i*0.1,2) for i in range(49)])
-binning_mass = array('d',[50 + i for i in range(81)])
+binning_mass = array('d',[60 + i for i in range(masshighut-60+1)])
 binning_charge = array('d',[-1.5,0,1.5])
-binning_u = array('d',[-100 + i*2 for i in range(101)])
+binning_u = array('d',[-3000000000,-30,-15,-10,-5,0,5,10,15,30,40,50,60,70,80,90,100,30000000000])
 
 NBIN = ROOT.std.vector('int')()
 NBIN.push_back(len(binning_mass)-1)
@@ -456,7 +461,10 @@ elif args.efficiency != 7:
     d = d.Define("All_TPPairs", f"CreateTPPair(Tag_Muons, BasicProbe_Muons, {doOS}, Tag_charge, Muon_charge, Tag_inExtraIdx, Muon_innerTrackExtraIdx, 1, {SS})") # these are all Muon_XX, so might just exclude same index in the loop
     d = d.Define("All_TPmass","getTPmass(All_TPPairs, Tag_pt, Tag_eta, Tag_phi, Muon_pt, Muon_eta, Muon_phi)")
     massLow  =  60
-    massHigh = 120
+    if args.zqtprojection:
+        massHigh = masshighut #BE CAREFUL HERE, THIS IS FOR FITS AS A FUNCTION OF UT, RANGE IS NARROWER FOR UT INTEGRATED FITS (massHigh = 120)
+    else:
+        massHigh = 120
     binning_mass = array('d',[massLow + i for i in range(int(1+massHigh-massLow))])
     massCut = f"All_TPmass > {massLow} && All_TPmass < {massHigh}"
 
@@ -481,7 +489,9 @@ elif args.efficiency != 7:
     ##            also, these are based on the initial Muon collection, with no precooked filtering
     d = d.Define("passCondition_IDIP", "Muon_mediumId && abs(Muon_dxybs) < 0.05")
     d = d.Define("passCondition_Trig", "isTriggeredMuon")
-    d = d.Define("passCondition_Iso",  "Muon_pfRelIso04_all < 0.15")
+    d = d.Define("passCondition_Iso",  "Muon_pfRelIso04_all < 0.15") #FOR NOW OLD ISO DEFINITION. OTHER COMMENTED LINES HAVE NEW DEFITION (BOTH CHARGED AND INCLUSIVE)
+    #d = d.Define("passCondition_Iso", "Muon_vtxAgnPfRelIso04_all < 0.15")
+    #d = d.Define("passCondition_Iso", "Muon_vtxAgnPfRelIso04_chg < 0.07")
     #d = d.Define("passCondition_Iso",  "Muon_pfRelIso03_all < 0.10")
     #d = d.Define("passCondition_Iso",  "Muon_pfRelIso03_chg < 0.05")
     
@@ -702,6 +712,89 @@ elif args.efficiency != 7:
         d = d.Define("Probe_charge_fail",   "BasicProbe_charge[failCondition]")
 
         makeAndSaveHistograms(d, histo_name, "IsolationNoTrigger", binning_mass, binning_pt, binning_eta)
+
+    ##For Isolation Failing Trigger
+
+    if(args.efficiency == 8):
+
+        # define condition for passing probes
+        d = d.Define("passCondition_IDIPTrigIso", "passCondition_IDIP && !passCondition_Trig &&  passCondition_Iso")
+        d = d.Define("failCondition_IDIPTrigIso", "passCondition_IDIP && !passCondition_Trig && !passCondition_Iso")
+        d = d.Define("passCondition", "getVariables(TPPairs, passCondition_IDIPTrigIso, 2)")
+        d = d.Define("failCondition", "getVariables(TPPairs, failCondition_IDIPTrigIso, 2)")            
+        # pass probes
+        d = d.Define("Probe_pt_pass",  "BasicProbe_pt[passCondition]")
+        d = d.Define("Probe_eta_pass", "BasicProbe_eta[passCondition]")
+        d = d.Define("TPmass_pass",    "BasicTPmass[passCondition]")
+        d = d.Define("Probe_u_pass",        "BasicProbe_u[passCondition]")
+        d = d.Define("Probe_charge_pass",   "BasicProbe_charge[passCondition]")
+        # fail probes
+        d = d.Define("Probe_pt_fail",  "BasicProbe_pt[failCondition]")
+        d = d.Define("Probe_eta_fail", "BasicProbe_eta[failCondition]")
+        d = d.Define("TPmass_fail",    "BasicTPmass[failCondition]")        
+        d = d.Define("Probe_u_fail",        "BasicProbe_u[failCondition]")
+        d = d.Define("Probe_charge_fail",   "BasicProbe_charge[failCondition]")
+
+        if (args.zqtprojection):
+            if not (args.genLevelEfficiency):
+                model_pass_iso = ROOT.RDF.THnDModel("pass_mu_"+histo_name, "Isolation_pass", 5, NBIN, XBINS)
+                model_fail_iso = ROOT.RDF.THnDModel("fail_mu_"+histo_name, "Isolation_fail", 5, NBIN, XBINS)
+                strings_pass = ROOT.std.vector('string')()
+                strings_pass.emplace_back("TPmass_pass")
+                strings_pass.emplace_back("Probe_pt_pass")
+                strings_pass.emplace_back("Probe_eta_pass")
+                strings_pass.emplace_back("Probe_charge_pass")
+                strings_pass.emplace_back("Probe_u_pass")
+                strings_pass.emplace_back("weight")
+                strings_fail = ROOT.std.vector('string')()
+                strings_fail.emplace_back("TPmass_fail")
+                strings_fail.emplace_back("Probe_pt_fail")
+                strings_fail.emplace_back("Probe_eta_fail")
+                strings_fail.emplace_back("Probe_charge_fail")
+                strings_fail.emplace_back("Probe_u_fail")
+                strings_fail.emplace_back("weight")
+     
+                pass_histogram_iso = d.HistoND(model_pass_iso,strings_pass)
+                fail_histogram_iso = d.HistoND(model_fail_iso,strings_fail)
+
+                ROOT.saveHistograms(pass_histogram_iso,fail_histogram_iso,ROOT.std.string(args.output_file))
+            else:
+                model_pass_trig = ROOT.RDF.THnDModel("pass_mu_"+histo_name, "Isolation_pass", 4, GENNBIN, GENXBINS)
+                model_norm_trig = ROOT.RDF.THnDModel("norm_mu_"+histo_name, "Isolation_norm", 4, GENNBIN, GENXBINS)
+                strings_pass = ROOT.std.vector('string')()
+                strings_pass.emplace_back("goodgenpt")
+                strings_pass.emplace_back("goodgeneta")
+                strings_pass.emplace_back("goodgencharge")
+                strings_pass.emplace_back("postFSRgenzqtprojection")
+                strings_pass.emplace_back("newweight")
+                strings_norm = ROOT.std.vector('string')()
+                strings_norm.emplace_back("goodgenpt")
+                strings_norm.emplace_back("goodgeneta")
+                strings_norm.emplace_back("goodgencharge")
+                strings_norm.emplace_back("postFSRgenzqtprojection")
+                strings_norm.emplace_back("weight")
+
+                d = d.Define("goodmuon","goodmuonisolation(goodgeneta,goodgenphi,Muon_pt,Muon_eta,Muon_phi,Muon_isGlobal,Muon_standalonePt,Muon_standaloneEta,Muon_standalonePhi,Muon_dxybs,Muon_mediumId,isTriggeredMuon,Muon_pfRelIso04_all)").Define("newweight","weight*goodmuon")
+
+                pass_histogram_reco = d.Filter("goodgenpt.size()>=2").HistoND(model_pass_trig,strings_pass)
+                pass_histogram_norm = d.Filter("goodgenpt.size()>=2").HistoND(model_norm_trig,strings_norm)
+
+                ROOT.saveHistogramsGen(pass_histogram_reco,pass_histogram_norm,ROOT.std.string(args.output_file))
+
+        else:
+            if not (args.genLevelEfficiency):
+                makeAndSaveHistograms(d, histo_name, "Isolation", binning_mass, binning_pt, binning_eta)
+            else:
+                d = d.Define("goodmuon","goodmuonisolation(goodgeneta,goodgenphi,Muon_pt,Muon_eta,Muon_phi,Muon_isGlobal,Muon_standalonePt,Muon_standaloneEta,Muon_standalonePhi,Muon_dxybs,Muon_mediumId,isTriggeredMuon,Muon_pfRelIso04_all)").Define("newweight","weight*goodmuon")
+
+                model_pass_reco = ROOT.RDF.TH2DModel("Pass","",len(binning_eta)-1,binning_eta,len(binning_pt)-1,binning_pt)
+                model_norm_reco = ROOT.RDF.TH2DModel("Norm","",len(binning_eta)-1,binning_eta,len(binning_pt)-1,binning_pt)
+
+                pass_histogram_reco = d.Histo2D(model_pass_reco,"goodgeneta","goodgenpt","newweight")
+                pass_histogram_norm = d.Histo2D(model_norm_reco,"goodgeneta","goodgenpt","weight")
+
+                pass_histogram_reco.Write()
+                pass_histogram_norm.Write()
 
 else:
     # for the veto selection

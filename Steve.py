@@ -254,7 +254,7 @@ d = d.Alias("Tag_pt",  "Muon_pt")
 d = d.Alias("Tag_eta", "Muon_eta")
 d = d.Alias("Tag_phi", "Muon_phi")
 d = d.Alias("Tag_charge", "Muon_charge")
-d = d.Alias("Tag_Z", "Muon_Z") # for tag-probe Z difference cut 
+d = d.Alias("Tag_Z", "Muon_vz") # for tag-probe Z difference cut 
 d = d.Alias("Tag_inExtraIdx", "Muon_innerTrackExtraIdx")
 d = d.Alias("Tag_outExtraIdx", "Muon_standaloneExtraIdx")
 # for tracking we may want to test efficiencies by charge, but in that case we enforce the (other) charge on the tag

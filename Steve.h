@@ -25,8 +25,9 @@ using namespace ROOT::VecOps;
   };*/
 
 std::unordered_map<int, TH2D> hVertexPileupWeights = {}; // this has the scale factors as a function of vertex z and pileup to make the vertex distribution in MC agree with the one in data
+std::unordered_map<int, TH1D> hPileupWeights = {};
 
-void initializeVertexPileupWeights(const std::string& _filename_vertexPileupWeights = "./utility/vertexPileupWeights.root") {
+void initializeVertexPileupWeights(const std::string& _filename_vertexPileupWeights = "./utility/vertexPileupWeights.root", const std::string& year = "2016") {
 
   // weights vs vertex z and pileup
   TFile _file_vertexPileupWeights = TFile(_filename_vertexPileupWeights.c_str(), "read");
@@ -35,23 +36,65 @@ void initializeVertexPileupWeights(const std::string& _filename_vertexPileupWeig
     exit(EXIT_FAILURE);
   }
   std::cout << "INFO >>> Initializing histograms for vertex-pileup weights from file " << _filename_vertexPileupWeights << std::endl;
-  std::vector<std::string> eras = {"BtoF", "GtoH"};
-  int id = 1;
-  for (auto& era : eras) {
-    std::vector<std::string> vars = {"weight_vertexZ_pileup", era};
-    std::string corrname = boost::algorithm::join(vars, "_");
-    auto* histptr = dynamic_cast<TH2D*>(_file_vertexPileupWeights.Get(corrname.c_str()));
-    if (histptr == nullptr) {
-        std::cerr << "WARNING: Failed to load correction " << corrname << " in file "
+  if (year=="2016"){
+    std::vector<std::string> eras = {"BtoF", "GtoH"};
+    int id = 1;
+    for (auto& era : eras) {
+      std::vector<std::string> vars = {"weight_vertexZ_pileup", era};
+      std::string corrname = boost::algorithm::join(vars, "_");
+      auto* histptr = dynamic_cast<TH2D*>(_file_vertexPileupWeights.Get(corrname.c_str()));
+      if (histptr == nullptr) {
+	std::cerr << "WARNING: Failed to load correction " << corrname << " in file "
                   << _filename_vertexPileupWeights << "! Aborting" << std::endl;
         exit(EXIT_FAILURE);
+      }
+      histptr->SetDirectory(0);
+      hVertexPileupWeights[id] = *dynamic_cast<TH2D*>(histptr);
+      id++;
+    }
+  }
+  else{
+    std::string corrname = "combined_hist";
+    auto* histptr = dynamic_cast<TH2D*>(_file_vertexPileupWeights.Get(corrname.c_str()));
+    if (histptr == nullptr) {
+      std::cerr << "WARNING: Failed to load correction " << corrname << " in file "
+                  << _filename_vertexPileupWeights << "! Aborting" << std::endl;
+      exit(EXIT_FAILURE);
     }
     histptr->SetDirectory(0);
-    hVertexPileupWeights[id] = *dynamic_cast<TH2D*>(histptr);
-    id++;
+    hVertexPileupWeights[2] = *dynamic_cast<TH2D*>(histptr); //Kept it to 2 to match with postVFP
+
   }
   _file_vertexPileupWeights.Close();
   
+}
+
+void initializePileupWeights(const std::string& input_PU_mc, const std::string& input_PU_data){
+
+  TFile _file_PU_mc = TFile(input_PU_mc.c_str(), "read");
+  auto* histptr_mc = dynamic_cast<TH1D*>(_file_PU_mc.Get("pileup"));
+  histptr_mc->SetDirectory(0);
+  _file_PU_mc.Close();
+
+  TFile _file_PU_data = TFile(input_PU_data.c_str(), "read");
+  auto* histptr_data = dynamic_cast<TH1D*>(_file_PU_data.Get("pileup"));
+  histptr_data->SetDirectory(0);
+  _file_PU_data.Close();
+
+  histptr_data->Scale(1./histptr_data->Integral(0, histptr_data->GetNbinsX() + 1));
+  histptr_mc->Scale(1./histptr_mc->Integral(0, histptr_mc->GetNbinsX() + 1));
+  
+  auto* puweight = dynamic_cast<TH1D*>(histptr_data->Clone("puweight"));
+  puweight->Divide(histptr_mc);
+
+  double cropHighWeight = 5;
+  for (int i=1; i < puweight->GetNbinsX() + 2; i++ ){
+    if(histptr_mc->GetBinContent(i) == 0.) puweight->SetBinContent(i,1.);
+    puweight->SetBinContent(i,std::min(puweight->GetBinContent(i), cropHighWeight));
+  }
+
+  hPileupWeights[2] = *dynamic_cast<TH1D*>(puweight);
+
 }
 
 double getValFromTH2(const TH2& h, const float& x, const float& y, const double& sumError=0.0) {
@@ -65,13 +108,28 @@ double getValFromTH2(const TH2& h, const float& x, const float& y, const double&
     return h.GetBinContent(xbin, ybin);
 }
 
+double getValFromTH1(const TH1& h, const float&x, const double& sumError=0.0) {
+  int xbin = std::max(1, std::min(h.GetNbinsX(), h.GetXaxis()->FindFixBin(x)));
+  if (sumError)
+    return h.GetBinContent(xbin) + sumError * h.GetBinError(xbin);
+  else
+    return h.GetBinContent(xbin);
+}
+
 double _get_vertexPileupWeight(const Float_t& vertexZ, const Float_t& nTrueInt, int era = 2) {
-    // era = 1 for preVFP, 2 for postVFP
+    // era = 1 for preVFP, 2 for postVFP (Also for 2017 & 2018 separately)
     // FIXME: for preVFP, histogram range for pileup is up to 45, but bin between 40 and 45 is empty, because there were few events with pileup > 40
     //        Rather than setting weights to 0 one should use the same as those from N-1 bin
     const TH2D& h = hVertexPileupWeights[era];
     return getValFromTH2(h, vertexZ, nTrueInt);
     
+}
+
+double _get_PileupWeight(const float_t& nTrueInt, int era =2) {
+   // Kept era=2 to be consistent
+
+   const TH1D& h = hPileupWeights[era];
+   return getValFromTH1(h, nTrueInt);
 }
 
 ////=====================================================================================
@@ -243,6 +301,30 @@ RVec<Bool_t> hasTriggerMatch(RVec<Float_t> &Muon_eta, RVec<Float_t> &Muon_phi,
       if (deltaR(Muon_eta[iMuon], Muon_phi[iMuon], TrigObj_eta[iTrig], TrigObj_phi[iTrig]) < 0.3) {
           hasTrigMatch = true;
           break;
+      }
+    }
+    TriggerMatch.push_back(hasTrigMatch);
+  }
+  return TriggerMatch;
+}
+
+RVec<Bool_t> hasTriggerMatch2018(RVec<Float_t> &Muon_eta, RVec<Float_t> &Muon_phi,
+                                 RVec<Int_t> &TrigObj_id, RVec<Int_t> &TrigObj_filterBits,
+                                 RVec<Float_t> &TrigObj_eta, RVec<Float_t> &TrigObj_phi,
+                                 RVec<Float_t> &TrigObj_pt, RVec<Float_t> &TrigObj_l1pt,
+                                 RVec<Float_t> &TrigObj_l2pt)
+{
+  RVec<Bool_t> TriggerMatch;
+  for(int iMuon = 0; iMuon<Muon_eta.size(); iMuon++){
+    bool hasTrigMatch = false;
+    for (unsigned int iTrig=0; iTrig<TrigObj_id.size(); iTrig++){
+      if (TrigObj_id[iTrig] != 13) continue;
+      if (TrigObj_pt[iTrig] < 24.) continue;
+      if (TrigObj_l1pt[iTrig] < 22.) continue;
+      if (!(TrigObj_l2pt[iTrig] > 10. && (TrigObj_filterBits[iTrig] & 2))) continue;
+      if (deltaR(Muon_eta[iMuon], Muon_phi[iMuon], TrigObj_eta[iTrig], TrigObj_phi[iTrig]) < 0.3) {
+	hasTrigMatch = true;
+	break;
       }
     }
     TriggerMatch.push_back(hasTrigMatch);

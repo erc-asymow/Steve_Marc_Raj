@@ -9,6 +9,7 @@ ROOT.gInterpreter.Declare('#include "GenFunctions.h"')
 import os
 #from os import listdir
 import time
+import sys
 
 import argparse
 
@@ -79,6 +80,8 @@ parser.add_argument("-o","--output_file", help="name of the output root file",
 parser.add_argument("-d","--isData", help="Pass 0 for MC, 1 for Data, default is 0",
                     type=int, default=0)
 
+parser.add_argument("-b","--isBkg", help="Pass 0 for MC and Data, 1 for Bkg, default is 0",
+                    type=int, default=0)
 parser.add_argument("-tpt","--tagPt", help="Minimum pt to select tag muons",
                     type=float, default=25.)
 
@@ -108,6 +111,9 @@ parser.add_argument("-zqt","--zqtprojection", action="store_true", help="Efficie
 parser.add_argument("-gen","--genLevelEfficiency", action="store_true", help="Compute MC truth efficiency")
 
 parser.add_argument("-tpg","--tnpGenLevel", action="store_true", help="Compute tag-and-probe efficiencies for MC as a function of postVFP gen variables")
+
+parser.add_argument("-y","--year", help="run year 2016, 2017, 2018",
+                    type=str,default="2016")
 
 args = parser.parse_args()
 tstart = time.time()
@@ -156,6 +162,15 @@ for name in files: filenames.push_back(name)
 
 d = ROOT.RDataFrame("Events",filenames )
 
+# had to hack, since data and mc were produced with old code
+#if args.isBkg:
+d = d.Alias("Muon_Z", "Muon_vz")
+d = d.Alias("Muon_X", "Muon_vx")
+d = d.Alias("Muon_Y", "Muon_vy")
+d = d.Alias("Track_Z", "Track_vz")
+d = d.Alias("Track_X", "Track_vx")
+d = d.Alias("Track_Y", "Track_vy")
+
 binning_pt = array('d',[24., 26., 28., 30., 32., 34., 36., 38., 40., 42., 44., 47., 50., 55., 60., 65.])
 binning_eta = array('d',[round(-2.4 + i*0.1,2) for i in range(49)])
 binning_mass = array('d',[50 + i for i in range(81)])
@@ -187,8 +202,20 @@ GENXBINS.push_back(ROOT.std.vector('double')(binning_u))
 
 minStandaloneNumberOfValidHits = args.standaloneValidHits
 
+if(args.isData == 1):
+    d = d.Define("gen_weight","1")
+else:
+    d = d.Define("gen_weight", "clipGenWeight(genWeight)") #for now (testing)
+weightSum = d.Sum("gen_weight")
+
+
+
+
 ##General Cuts
-d = d.Filter("HLT_IsoMu24 || HLT_IsoTkMu24","HLT Cut")
+if(args.year == "2016"):
+    d = d.Filter("HLT_IsoMu24 || HLT_IsoTkMu24","HLT Cut")
+else:
+    d = d.Filter("HLT_IsoMu24","HLT Cut")
 
 d = d.Filter("PV_npvsGood >= 1","NVtx Cut")
 
@@ -210,8 +237,17 @@ if doOStracking & SS:
     raise Exception("Both doOStracking and SS can't be True. Require noOppositeChargeTracking if you rally want Same Sign")
 
 if (args.isData == 1):
-    jsonhelper = make_jsonhelper("Cert_271036-284044_13TeV_Legacy2016_Collisions16_JSON.txt")
-    d = d.Filter(jsonhelper,["run","luminosityBlock"],"jsonfilter")
+    if (args.year == "2016"): 
+        jsonhelper = make_jsonhelper("Cert_271036-284044_13TeV_Legacy2016_Collisions16_JSON.txt")
+        d = d.Filter(jsonhelper,["run","luminosityBlock"],"jsonfilter")
+    elif (args.year == "2018"):
+        jsonhelper = make_jsonhelper("utility/Cert_314472-325175_13TeV_UL2018_Collisions18_HLT_IsoMu24_v_CustomJSON.txt")
+        d = d.Filter(jsonhelper,["run","luminosityBlock"],"jsonfilter")
+    elif (args.year == "2017"):
+        print("2017  is not yet supported")
+    else:
+        print("Please provide correct year")
+
 
 ## Weights
 
@@ -221,21 +257,56 @@ else:
     if not args.noVertexPileupWeight:
         if hasattr(ROOT, "initializeVertexPileupWeights"):
             print("Initializing histograms with vertex-pileup weights")
-            ROOT.initializeVertexPileupWeights("./utility/vertexPileupWeights.root")
+            input_vertexWeight = ""
+            if (args.year == "2016"):
+                input_vertexWeight = "./utility/vertexPileupWeights.root"
+            elif (args.year == "2017"):
+                input_vertexWeight = "./utility/vtx_reweight_2dPUandbeamspot2017.root"
+            elif (args.year == "2018"):
+                input_vertexWeight = "./utility/vtx_reweight_2dPUandbeamspot2018.root"
+            else:
+                print("Please provide a correct year")
+                sys.exit(1)
+            ROOT.initializeVertexPileupWeights(input_vertexWeight,args.year)
             d = d.Define("vertex_weight", "_get_vertexPileupWeight(GenVtx_z,Pileup_nTrueInt,2)")
     else:
         d = d.Define("vertex_weight", "1.0")
-    d = d.Define("gen_weight", "clipGenWeight(genWeight)") #for now (testing)
-    d = d.Define("pu_weight", "puw_2016(Pileup_nTrueInt,2)") # 2 is for postVFP
+    if (args.year == "2016"):
+        d = d.Define("pu_weight", "puw_2016(Pileup_nTrueInt,2)") # 2 is for postVFP
+    else:
+        if hasattr(ROOT, "initializePileupWeights"):
+            print("Initializing Pileup weights for 2017 or 2018")
+            input_PU_mc = ""
+            input_PU_data = ""
+            if(args.year == "2017"):
+                input_PU_mc = "./utility/MC2017PU.root"
+                input_PU_data = "./utility/pileupHistogram-customJSON-UL2017-69200ub-99bins.root"
+            elif(args.year == "2018"):
+                input_PU_mc = "./utility/MC2018PU.root"
+                input_PU_data = "./utility/pileupHistogram-customJSON-UL2018-69200ub-99bins.root"
+            else:
+                print("Please provide a correct year")
+                sys.exit(1)
+            ROOT.initializePileupWeights(input_PU_mc,input_PU_data)
+            d = d.Define("pu_weight", "_get_PileupWeight(Pileup_nTrueInt,2)")
+            #d = d.Define("pu_weight", "puw_2016(Pileup_nTrueInt,2)") # 2 is for postVFP
+
+ 
     d = d.Define("weight", "gen_weight*pu_weight*vertex_weight")
     
+
+
+    
 ## For Tag Muons
-d = d.Define("isTriggeredMuon","hasTriggerMatch(Muon_eta, Muon_phi, TrigObj_id, TrigObj_filterBits, TrigObj_eta, TrigObj_phi)")
+if args.year == 2016:
+    d = d.Define("isTriggeredMuon","hasTriggerMatch(Muon_eta, Muon_phi, TrigObj_id, TrigObj_filterBits, TrigObj_eta, TrigObj_phi)")
+else:
+    d =d.Define("isTriggeredMuon","hasTriggerMatch2018(Muon_eta, Muon_phi, TrigObj_id, TrigObj_filterBits, TrigObj_eta, TrigObj_phi, TrigObj_pt, TrigObj_l1pt, TrigObj_l2pt)")
 
 if(args.isData == 1):
     d = d.Define("isGenMatchedMuon","createTrues(nMuon)")
 else: 
-    d = d.Define("GenMuonBare", "GenPart_status == 1 && (GenPart_statusFlags & 1) && abs(GenPart_pdgId) == 13")
+    d = d.Define("GenMuonBare", "GenPart_status == 1 && (GenPart_statusFlags & 1 || GenPart_statusFlags & (5<<1)) && abs(GenPart_pdgId) == 13")
     d = d.Define("GenMuonBare_pt", "GenPart_pt[GenMuonBare]")
     d = d.Define("GenMuonBare_eta", "GenPart_eta[GenMuonBare]")
     d = d.Define("GenMuonBare_phi", "GenPart_phi[GenMuonBare]")
@@ -272,6 +343,7 @@ if (args.genLevelEfficiency):
     d = d.Define("postFSRgenzqtprojection","postFSRgenzqtprojection(goodgenpt,goodgeneta,goodgenphi)")
     # this might be done simply as
     # d = d.Define("goodgenpt", "GenMuonBare_pt") # the collection might have more than 2 elements here, but can be easily filtered (should be sorted too)
+
 
 # Open output file
 f_out = ROOT.TFile(args.output_file, "RECREATE")
@@ -764,6 +836,9 @@ else:
     makeAndSaveHistograms(d, histo_name, "veto", binning_mass, binning_pt, binning_eta)
     
 
+weightSumHist = ROOT.TH1D("weightSum","Sum of the sign of the gen weights",1,-0.5,0.5)
+weightSumHist.SetBinContent(1,weightSum.GetValue())
+weightSumHist.Write()
         
 f_out.Close()
 

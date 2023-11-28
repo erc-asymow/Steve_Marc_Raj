@@ -310,18 +310,14 @@ RVec<Bool_t> hasTriggerMatch(RVec<Float_t> &Muon_eta, RVec<Float_t> &Muon_phi,
 
 RVec<Bool_t> hasTriggerMatch2018(RVec<Float_t> &Muon_eta, RVec<Float_t> &Muon_phi,
                                  RVec<Int_t> &TrigObj_id, RVec<Int_t> &TrigObj_filterBits,
-                                 RVec<Float_t> &TrigObj_eta, RVec<Float_t> &TrigObj_phi,
-                                 RVec<Float_t> &TrigObj_pt, RVec<Float_t> &TrigObj_l1pt,
-                                 RVec<Float_t> &TrigObj_l2pt)
+                                 RVec<Float_t> &TrigObj_eta, RVec<Float_t> &TrigObj_phi)
 {
   RVec<Bool_t> TriggerMatch;
   for(int iMuon = 0; iMuon<Muon_eta.size(); iMuon++){
     bool hasTrigMatch = false;
     for (unsigned int iTrig=0; iTrig<TrigObj_id.size(); iTrig++){
       if (TrigObj_id[iTrig] != 13) continue;
-      if (TrigObj_pt[iTrig] < 24.) continue;
-      if (TrigObj_l1pt[iTrig] < 22.) continue;
-      if (!(TrigObj_l2pt[iTrig] > 10. && (TrigObj_filterBits[iTrig] & 2))) continue;
+      if (!(TrigObj_filterBits[iTrig] & 4096)) continue;
       if (deltaR(Muon_eta[iMuon], Muon_phi[iMuon], TrigObj_eta[iTrig], TrigObj_phi[iTrig]) < 0.3) {
 	hasTrigMatch = true;
 	break;

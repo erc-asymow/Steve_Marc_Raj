@@ -116,6 +116,7 @@ parser.add_argument("-tpg","--tnpGenLevel", action="store_true", help="Compute t
 
 parser.add_argument("-y","--year", help="run year 2016, 2017, 2018",
                     type=str,default="2016")
+parser.add_argument("-iso","--isoDefinition",help="Choose between the old and new isolation definition, 0 is old, 1 is new", default=1, choices = [0,1])
 
 args = parser.parse_args()
 tstart = time.time()
@@ -307,7 +308,7 @@ else:
 if args.year == 2016:
     d = d.Define("isTriggeredMuon","hasTriggerMatch(Muon_eta, Muon_phi, TrigObj_id, TrigObj_filterBits, TrigObj_eta, TrigObj_phi)")
 else:
-    d =d.Define("isTriggeredMuon","hasTriggerMatch2018(Muon_eta, Muon_phi, TrigObj_id, TrigObj_filterBits, TrigObj_eta, TrigObj_phi, TrigObj_pt, TrigObj_l1pt, TrigObj_l2pt)")
+    d =d.Define("isTriggeredMuon","hasTriggerMatch2018(Muon_eta, Muon_phi, TrigObj_id, TrigObj_filterBits, TrigObj_eta, TrigObj_phi)")
 
 if(args.isData == 1):
     d = d.Define("isGenMatchedMuon","createTrues(nMuon)")
@@ -562,8 +563,11 @@ elif args.efficiency != 7:
     ##            also, these are based on the initial Muon collection, with no precooked filtering
     d = d.Define("passCondition_IDIP", "Muon_mediumId && abs(Muon_dxybs) < 0.05")
     d = d.Define("passCondition_Trig", "isTriggeredMuon")
-    d = d.Define("passCondition_Iso",  "Muon_pfRelIso04_all < 0.15") #FOR NOW OLD ISO DEFINITION. OTHER COMMENTED LINES HAVE NEW DEFITION (BOTH CHARGED AND INCLUSIVE)
-    #d = d.Define("passCondition_Iso", "Muon_vtxAgnPfRelIso04_all < 0.15")
+    #d = d.Define("passCondition_Iso",  "Muon_pfRelIso04_all < 0.15") #FOR NOW OLD ISO DEFINITION. OTHER COMMENTED LINES HAVE NEW DEFITION (BOTH CHARGED AND INCLUSIVE)
+    if(args.isoDefinition == 1):
+        d = d.Define("passCondition_Iso", "Muon_vtxAgnPfRelIso04_all < 0.15")
+    elif(args.isoDefinition == 0):
+        d = d.Define("passCondition_Iso",  "Muon_pfRelIso04_all < 0.15")
     #d = d.Define("passCondition_Iso", "Muon_vtxAgnPfRelIso04_chg < 0.07")
     #d = d.Define("passCondition_Iso",  "Muon_pfRelIso03_all < 0.10")
     #d = d.Define("passCondition_Iso",  "Muon_pfRelIso03_chg < 0.05")

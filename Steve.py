@@ -116,7 +116,7 @@ parser.add_argument("-tpg","--tnpGenLevel", action="store_true", help="Compute t
 
 parser.add_argument("-y","--year", help="run year 2016, 2017, 2018",
                     type=str,default="2016")
-parser.add_argument("-iso","--isoDefinition",help="Choose between the old and new isolation definition, 0 is old, 1 is new", default=1, choices = [0,1])
+parser.add_argument("-iso","--isoDefinition",help="Choose between the old and new isolation definition, 0 is old, 1 is new", default=1, choices = [0,1], type =int)
 
 args = parser.parse_args()
 tstart = time.time()

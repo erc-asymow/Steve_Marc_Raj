@@ -89,7 +89,7 @@ if __name__ == "__main__":
 
     parser.add_argument("-y","--year", help="run year 2016, 2017, 2018",
                     type=str,default="2016")
-    parser.add_argument("-iso","--isoDefinition",help="Choose between the old and new isolation definition, 0 is old, 1 is new", default=1, choices = [0,1])
+    parser.add_argument("-iso","--isoDefinition",help="Choose between the old and new isolation definition, 0 is old, 1 is new", default=1, type=int, choices = [0,1])
 
 
     args = parser.parse_args()

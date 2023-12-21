@@ -14,6 +14,16 @@ import sys
 import argparse
 
 
+cpp_code = """ 
+    template <typename T>
+    int debugFilter(RVec<T> var) {
+        std::cout << var << std::endl;
+        return 1;
+        }
+    """
+ROOT.gInterpreter.ProcessLine(cpp_code)
+
+
 def makeAndSaveOneHist(d, histo_name, histo_title, binning_mass, binning_pt, binning_eta, massVar="TPmass", isPass=True):
 
     passStr = "pass" if isPass else "fail"
@@ -23,6 +33,7 @@ def makeAndSaveOneHist(d, histo_name, histo_title, binning_mass, binning_pt, bin
                                len(binning_eta)-1, binning_eta)
     
     histogram = d.Histo3D(model, f"{massVar}_{passStr}", f"Probe_pt_{passStr}", f"Probe_eta_{passStr}", "weight")
+    print(histogram.Integral())
     histogram.Write()
     
     
@@ -150,8 +161,15 @@ for i in range(len(args.input_path)):
     for root, dirnames, filenames in os.walk(args.input_path[i]):
         for filename in filenames:
             if '.root' in filename:
-                files.append(os.path.join(root, filename))
+                try:
+                    file_tmp = ROOT.TFile(os.path.join(root, filename), "READ")
+                    if not file_tmp.IsZombie():
+                        files.append(os.path.join(root, filename))
+                    file_tmp.Close()
+                except:
+                    pass
 
+print("Num files:  ", len(files))
 
 if args.charge and args.efficiency in [2]:
     print("")
@@ -165,6 +183,7 @@ filenames = ROOT.std.vector('string')()
 for name in files: filenames.push_back(name)
 
 d = ROOT.RDataFrame("Events",filenames )
+
 
 # had to hack, since definition of the vertex variables were not consistent throughout 
 #various productions. Made alias of the new variables since the part where actual calculation 
@@ -217,7 +236,7 @@ weightSum = d.Sum("gen_weight")
 
 
 
-
+print("Starting general cuts")
 ##General Cuts
 if(args.year == "2016"):
     d = d.Filter("HLT_IsoMu24 || HLT_IsoTkMu24","HLT Cut")
@@ -298,14 +317,12 @@ else:
             d = d.Define("pu_weight", "_get_PileupWeight(Pileup_nTrueInt,2)")
             #d = d.Define("pu_weight", "puw_2016(Pileup_nTrueInt,2)") # 2 is for postVFP
 
- 
     d = d.Define("weight", "gen_weight*pu_weight*vertex_weight")
     
 
-
     
 ## For Tag Muons
-if args.year == 2016:
+if args.year == "2016":
     d = d.Define("isTriggeredMuon","hasTriggerMatch(Muon_eta, Muon_phi, TrigObj_id, TrigObj_filterBits, TrigObj_eta, TrigObj_phi)")
 else:
     d =d.Define("isTriggeredMuon","hasTriggerMatch2018(Muon_eta, Muon_phi, TrigObj_id, TrigObj_filterBits, TrigObj_eta, TrigObj_phi)")
@@ -496,7 +513,8 @@ elif (args.efficiency == 2):
         d = d.Define("TPmass_fail",    "TPmass[failCondition]")
         d = d.Define("Probe_pt_fail",  "Probe_pt[failCondition]")
         d = d.Define("Probe_eta_fail", "Probe_eta[failCondition]")
-
+        
+        print("Making histograms for tracking step")
         makeAndSaveHistograms(d, histo_name, "Tracking", binning_mass, binning_pt, binning_eta)
 
         # save also the mass for passing probes computed with standalone variables
@@ -506,6 +524,7 @@ elif (args.efficiency == 2):
         makeAndSaveOneHist(d, f"{histo_name}_alt", "Tracking (mass from SA muons)",
                            binning_mass, binning_pt, binning_eta,
                            massVar="TPmassFromSA", isPass=True)
+ 
         
     else:
         d = d.Define("goodmuon","goodmuonglobal(goodgeneta,goodgenphi,Muon_pt,Muon_eta,Muon_phi,Muon_isGlobal,Muon_standalonePt,Muon_standaloneEta,Muon_standalonePhi)").Define("newweight","weight*goodmuon")

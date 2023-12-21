@@ -48,6 +48,7 @@ void initializeVertexPileupWeights(const std::string& _filename_vertexPileupWeig
                   << _filename_vertexPileupWeights << "! Aborting" << std::endl;
         exit(EXIT_FAILURE);
       }
+      // std::cout << "Era:" << era << std::endl;
       histptr->SetDirectory(0);
       hVertexPileupWeights[id] = *dynamic_cast<TH2D*>(histptr);
       id++;
@@ -66,6 +67,8 @@ void initializeVertexPileupWeights(const std::string& _filename_vertexPileupWeig
 
   }
   _file_vertexPileupWeights.Close();
+  
+  std::cout << "INFO >>> Histograms correctly initialized with vertex-pileup weights" << std::endl;
   
 }
 

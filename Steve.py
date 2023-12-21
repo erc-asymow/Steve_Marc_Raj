@@ -3,7 +3,7 @@ from array import array
 import json
 
 ROOT.gInterpreter.ProcessLine(".O3")
-#ROOT.ROOT.EnableImplicitMT()
+ROOT.ROOT.EnableImplicitMT()
 ROOT.gInterpreter.Declare('#include "Steve.h"')
 ROOT.gInterpreter.Declare('#include "GenFunctions.h"')
 import os
@@ -12,6 +12,16 @@ import time
 import sys
 
 import argparse
+
+
+cpp_code = """ 
+    template <typename T>
+    int debugFilter(RVec<T> var) {
+        std::cout << var << std::endl;
+        return 1;
+        }
+    """
+ROOT.gInterpreter.ProcessLine(cpp_code)
 
 
 def makeAndSaveOneHist(d, histo_name, histo_title, binning_mass, binning_pt, binning_eta, massVar="TPmass", isPass=True):
@@ -150,14 +160,13 @@ files=[]
 for i in range(len(args.input_path)):
     for root, dirnames, filenames in os.walk(args.input_path[i]):
         for filename in filenames:
-            if '.root' in filename and filename =="test_100.root":
+            if '.root' in filename:
                 try:
                     file_tmp = ROOT.TFile(os.path.join(root, filename), "READ")
-                    print(filename)
-                    files.append(os.path.join(root, filename))
+                    if not file_tmp.IsZombie():
+                        files.append(os.path.join(root, filename))
                     file_tmp.Close()
                 except:
-                    print(f"Found corrupted file with name {filename}")
                     pass
 
 print("Num files:  ", len(files))
@@ -308,14 +317,12 @@ else:
             d = d.Define("pu_weight", "_get_PileupWeight(Pileup_nTrueInt,2)")
             #d = d.Define("pu_weight", "puw_2016(Pileup_nTrueInt,2)") # 2 is for postVFP
 
- 
     d = d.Define("weight", "gen_weight*pu_weight*vertex_weight")
     
 
-
     
 ## For Tag Muons
-if args.year == 2016:
+if args.year == "2016":
     d = d.Define("isTriggeredMuon","hasTriggerMatch(Muon_eta, Muon_phi, TrigObj_id, TrigObj_filterBits, TrigObj_eta, TrigObj_phi)")
 else:
     d =d.Define("isTriggeredMuon","hasTriggerMatch2018(Muon_eta, Muon_phi, TrigObj_id, TrigObj_filterBits, TrigObj_eta, TrigObj_phi)")

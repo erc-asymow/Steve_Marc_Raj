@@ -325,12 +325,12 @@ else:
 if args.year == "2016":
     d = d.Define("isTriggeredMuon","hasTriggerMatch(Muon_eta, Muon_phi, TrigObj_id, TrigObj_filterBits, TrigObj_eta, TrigObj_phi)")
 else:
-    d =d.Define("isTriggeredMuon","hasTriggerMatch2018(Muon_eta, Muon_phi, TrigObj_id, TrigObj_filterBits, TrigObj_eta, TrigObj_phi)")
+    d = d.Define("isTriggeredMuon","hasTriggerMatch2018(Muon_eta, Muon_phi, TrigObj_id, TrigObj_filterBits, TrigObj_eta, TrigObj_phi)")
 
-if(args.isData == 1):
+if (args.isData==1) or (args.isBkg==1):
     d = d.Define("isGenMatchedMuon","createTrues(nMuon)")
-else: 
-    d = d.Define("GenMuonBare", "GenPart_status == 1 && (GenPart_statusFlags & 1 || GenPart_statusFlags & (5<<1)) && abs(GenPart_pdgId) == 13")
+else:
+    d = d.Define("GenMuonBare", "GenPart_status == 1 && (GenPart_statusFlags & 1 || (GenPart_statusFlags & (5<<1))) && abs(GenPart_pdgId) == 13")
     d = d.Define("GenMuonBare_pt", "GenPart_pt[GenMuonBare]")
     d = d.Define("GenMuonBare_eta", "GenPart_eta[GenMuonBare]")
     d = d.Define("GenMuonBare_phi", "GenPart_phi[GenMuonBare]")
@@ -376,11 +376,11 @@ f_out = ROOT.TFile(args.output_file, "RECREATE")
 if(args.efficiency == 1):
     if not (args.genLevelEfficiency):
 
-        if(args.isData == 1):
+        if (args.isData==1) or (args.isBkg==1):
             d = d.Define("isGenMatchedTrack","createTrues(nTrack)")
         else:
-            d = d.Define("isGenMatchedTrack", "hasGenMatch(  GenMuonBare_eta, GenMuonBare_phi, Track_eta, Track_phi)")
-            d = d.Define("GenMatchedIdx",     "GenMatchedIdx(GenMuonBare_eta, GenMuonBare_phi, Track_eta, Track_phi)")
+            d = d.Define("isGenMatchedTrack", "hasGenMatch(GenMuonBare_eta, GenMuonBare_phi, Track_eta, Track_phi)")
+            d = d.Define("GenMatchedIdx", "GenMatchedIdx(GenMuonBare_eta, GenMuonBare_phi, Track_eta, Track_phi)")
 
         chargeCut = ""
         if args.charge:
@@ -446,8 +446,8 @@ if(args.efficiency == 1):
 #Global|MergedStandAloneMuon ("tracking" efficiency)
 elif (args.efficiency == 2):
     if not (args.genLevelEfficiency):
-        if(args.isData == 1):
-            d = d.Define("isGenMatchedMergedStandMuon","createTrues(nMergedStandAloneMuon)")
+        if (args.isData==1) or (args.isBkg==1):
+            d = d.Define("isGenMatchedMergedStandMuon", "createTrues(nMergedStandAloneMuon)")
         else:
             d = d.Define("isGenMatchedMergedStandMuon","hasGenMatch(GenMuonBare_eta, GenMuonBare_phi, MergedStandAloneMuon_eta, MergedStandAloneMuon_phi, 0.3)")
             d = d.Define("GenMatchedIdx","GenMatchedIdx(GenMuonBare_eta, GenMuonBare_phi, MergedStandAloneMuon_eta, MergedStandAloneMuon_phi, 0.3)")
@@ -540,7 +540,7 @@ elif (args.efficiency == 2):
 
 ## Muons for all other efficiency step except veto
 elif args.efficiency != 7:
-    if(args.isData != 1):
+    if (args.isData!=1) and (args.isBkg!=1):
         d = d.Define("GenMatchedIdx","GenMatchedIdx(GenMuonBare_eta, GenMuonBare_phi, Muon_eta, Muon_phi)")
 
     chargeCut = ""
@@ -902,7 +902,7 @@ else:
     #d = d.Define("BasicProbe_Muons", f"Muon_pt > 10 && abs(Muon_eta) < 2.4 && (Muon_isGlobal || Muon_isTracker) && isGenMatchedMuon {chargeCut}")
     #
     # use tracks for all probes rather than muons
-    if(args.isData == 1):
+    if (args.isData==1) or (args.isBkg==1):
         d = d.Define("isGenMatchedTrack","createTrues(nTrack)")
     else:
         d = d.Define("isGenMatchedTrack", "hasGenMatch(  GenMuonBare_eta, GenMuonBare_phi, Track_eta, Track_phi)")

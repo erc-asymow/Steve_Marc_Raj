@@ -55,7 +55,8 @@ if __name__ == "__main__":
                         help='Output directory to store all root files')
     parser.add_argument('-d',  '--dryRun', action='store_true',
                         help='Do not execute commands, just print them')
-    parser.add_argument('-r',  '--run', default="all", type=str, choices=["data", "mc", "stand", "bkg", "Ztautau", "TTSemileptonic", "TTFullyleptonic", "ZZ", "WZ", "WW", "all"],
+    parser.add_argument('-r',  '--run', default="all", type=str, 
+                        choices=["data", "mc", "stand", "bkg", "Ztautau", "TTSemileptonic", "TTFullyleptonic", "WplusJets", "WminusJets", "ZZ", "WZ", "WW", "all"],
                         help='Choose what to run, either data or MC, or both')
     # FIXME: unless I change histogram names inside the files I can't merge different working points, I could just merge data with MC but not worth
     #parser.add_argument('-m',  '--merge', action='store_true',
@@ -108,14 +109,17 @@ if __name__ == "__main__":
         safeSystem(f"mkdir -p {outdir}", dryRun=False)
 
     inputdir_dict = {"data" : "SingleMuon/", 
-                     "mc" : "DYJetsToMuMu_H2ErratumFix_TuneCP5_13TeV-powhegMiNNLO-pythia8-photos/", 
+                     "mc" : "DYJetsToMuMu_H2ErratumFix_TuneCP5_13TeV-powhegMiNNLO-pythia8-photos/",
+                     #"mc" : "DYJetsToMuMu_H2ErratumFix_PDFExt_TuneCP5_13TeV-powhegMiNNLO-pythia8-photos/",
                      "Ztautau" : "DYJetsToTauTau_M-50_AtLeastOneEorMuDecay_TuneCP5_13TeV-powhegMiNNLO-pythia8-photos/", 
                      "TTFullyleptonic" : "TTTo2L2Nu_TuneCP5_13TeV-powheg-pythia8/",
                      "TTSemileptonic" : "TTToSemiLeptonic_TuneCP5_13TeV-powheg-pythia8/",
+                     "WplusJets" : "WplusJetsToMuNu_H2ErratumFix_TuneCP5_13TeV-powhegMiNNLO-pythia8-photos/",
+                     "WminusJets" : "WminusJetsToMuNu_H2ErratumFix_TuneCP5_13TeV-powhegMiNNLO-pythia8-photos/",
                      "ZZ" : "ZZTo2L2Nu_TuneCP5_13TeV_powheg_pythia8/", 
                      "WZ" :"WZ_TuneCP5_13TeV-pythia8/", 
                      "WW" : "WW_TuneCP5_13TeV-pythia8/"}
-    isBkg_dict = {"data": 0, "mc": 0, "Ztautau": 1, "TTSemileptonic": 1, "TTFullyleptonic": 1, "ZZ": 1, "WZ": 1, "WW": 1}
+    isBkg_dict = {"data": 0, "mc": 0, "Ztautau": 1, "TTSemileptonic": 1, "TTFullyleptonic": 1, "WplusJets": 1, "WminusJets":1, "ZZ": 1, "WZ": 1, "WW": 1}
 
     #inputdir_data = "SingleMuon/"
     #inputdir_mc   = "DYJetsToMuMu_H2ErratumFix_TuneCP5_13TeV-powhegMiNNLO-pythia8-photos/"
@@ -136,6 +140,10 @@ if __name__ == "__main__":
         toRun.append("TTFullyleptonic")
     if args.run in ["all", "bkg", "TTSemileptonic"]:
         toRun.append("TTSemileptonic")
+    if args.run in ["all", "bkg", "WplusJets"]:
+        toRun.append("WplusJets")
+    if args.run in ["all", "bkg", "WminusJets"]:
+        toRun.append("WminusJets")
     if args.run in ["all", "bkg", "ZZ"]:
         toRun.append("ZZ")
     if args.run in ["all", "bkg", "WZ"]:

@@ -53,7 +53,7 @@ def makeAndSaveHistograms(d, histo_name, histo_title, binning_mass, binning_pt, 
     
     # pass_histogram.Write()
     # fail_histogram.Write()
-
+    
     makeAndSaveOneHist(d, histo_name, histo_title, binning_mass, binning_pt, binning_eta, massVar, isPass=True)
     makeAndSaveOneHist(d, histo_name, histo_title, binning_mass, binning_pt, binning_eta, massVar, isPass=False)
     
@@ -327,7 +327,7 @@ if args.year == "2016":
 else:
     d = d.Define("isTriggeredMuon","hasTriggerMatch2018(Muon_eta, Muon_phi, TrigObj_id, TrigObj_filterBits, TrigObj_eta, TrigObj_phi)")
 
-if (args.isData==1) or (args.isBkg==1):
+if args.isData==1:
     d = d.Define("isGenMatchedMuon","createTrues(nMuon)")
 else:
     d = d.Define("GenMuonBare", "GenPart_status == 1 && (GenPart_statusFlags & 1 || (GenPart_statusFlags & (5<<1))) && abs(GenPart_pdgId) == 13")

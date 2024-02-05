@@ -53,7 +53,7 @@ def makeAndSaveHistograms(d, histo_name, histo_title, binning_mass, binning_pt, 
     
     # pass_histogram.Write()
     # fail_histogram.Write()
-
+    
     makeAndSaveOneHist(d, histo_name, histo_title, binning_mass, binning_pt, binning_eta, massVar, isPass=True)
     makeAndSaveOneHist(d, histo_name, histo_title, binning_mass, binning_pt, binning_eta, massVar, isPass=False)
     
@@ -79,68 +79,73 @@ def make_jsonhelper(filename):
 
 parser = argparse.ArgumentParser()
 
-parser.add_argument("-e","--efficiency",
-		    help="1 for reco, 2 for \"tracking\", 3 for idip, 4 for trigger, 5 for isolation, 6 for isolation without trigger, 7 for veto, 8 for isolation with failing trigger",
+parser.add_argument("-e", "--efficiency", 
+					help="1 for reco, 2 for \"tracking\", 3 for idip, 4 for trigger, 5 for isolation, 6 for isolation without trigger, 7 for veto, 8 for isolation with failing trigger",
                     type=int, choices=range(1,9))
 
 #parser.add_argument("-i","--input_path", help="path of the input root files", type=str)
 
-parser.add_argument("-i","--input_path", nargs='+', default=[], help="path of the input root files")
+parser.add_argument("-i", "--input_path", help="path of the input root files",
+					nargs='+', default=[])
 
-parser.add_argument("-o","--output_file", help="name of the output root file",
+parser.add_argument("-o", "--output_file", help="name of the output root file",
                     type=str)
 
-parser.add_argument("-d","--isData", help="Pass 0 for MC, 1 for Data, default is 0",
-                    type=int, default=0)
+parser.add_argument("-d", "--isData", help="Pass 0 for MC, 1 for Data, default is 0",
+                    type=int, default=0, choices=[0,1])
 
-parser.add_argument("-b","--isBkg", help="Pass 0 for MC and Data, 1 for Bkg, default is 0",
-                    type=int, default=0)
-parser.add_argument("-tpt","--tagPt", help="Minimum pt to select tag muons",
+parser.add_argument("-b", "--isBkg", help="Pass 0 for MC and Data, 1 for Bkg, default is 0",
+                    type=int, default=0, choices=[0,1])
+                    
+parser.add_argument("-tpt", "--tagPt", help="Minimum pt to select tag muons",
                     type=float, default=25.)
 
-parser.add_argument("-tiso","--tagIso", help="Isolation threshold to select tag muons",
+parser.add_argument("-tiso", "--tagIso", help="Isolation threshold to select tag muons",
                     type=float, default=0.15)
 
 parser.add_argument(        "--standaloneValidHits", help="Minimum number of valid hits for the standalone track (>= this value)",
                     type=int, default=1)
 
-parser.add_argument("-c","--charge", help="Make efficiencies for a specific charge of the probe (-1/1 for positive negative, 0 for inclusive)",
-                    type=int, default=0, choices=[-1, 0, 1])
+parser.add_argument("-c", "--charge", help="Make efficiencies for a specific charge of the probe (-1/1 for positive negative, 0 for inclusive)",
+                    type=int, default=0, choices=[-1,0,1])
 
-parser.add_argument("-p","--eventParity", help="Select events with given parity for statistical tests, -1/1 for odd/even events, 0 for all (default)",
-                    type=int, default=0, choices=[-1, 0, 1])
+parser.add_argument("-p", "--eventParity", help="Select events with given parity for statistical tests, -1/1 for odd/even events, 0 for all (default)",
+                    type=int, default=0, choices=[-1,0,1])
 
 parser.add_argument('-nw', '--noVertexPileupWeight', action='store_true', help='Do not use weights for vertex z position')
 #parser.add_argument("-vpw", "--vertexPileupWeight", action="store_true", help="Use weights for vertex z position versus pileup (only for MC)")
 
+parser.add_argument('-ngm', '--noGenMatching', action='store_true', help='Do not apply gen-matching for the probe (for non prompt bkg study)')
+
+parser.add_argument(        '--reverseGenMatching', action='store_true', help='Reverse the gen-matching condition for the probe (for non prompt contributions on Zmumu sample)')
+
 parser.add_argument("-nos", "--noOppositeCharge", action="store_true", help="Don't require opposite charges between tag and probe (including tracking, unless also using --noOppositeChargeTracking)")
+
 parser.add_argument(        "--noOppositeChargeTracking", action="store_true", help="Don't require opposite charges between tag and probe for tracking")
 
-parser.add_argument("-sc", "--SameCharge", action="store_true", help="Require the TP Pair to have same sign (fo bkg study)",
-                     default=False)
+parser.add_argument("-sc", "--SameCharge", action="store_true", help="Require the TP Pair to have same sign (for bkg study)")
 
-parser.add_argument("-zqt","--zqtprojection", action="store_true", help="Efficiencies evaluated as a function of zqtprojection (only for trigger and isolation)")
+parser.add_argument("-zqt", "--zqtprojection", action="store_true", help="Efficiencies evaluated as a function of zqtprojection (only for trigger and isolation)")
 
-parser.add_argument("-gen","--genLevelEfficiency", action="store_true", help="Compute MC truth efficiency")
+parser.add_argument("-gen", "--genLevelEfficiency", action="store_true", help="Compute MC truth efficiency")
 
-parser.add_argument("-tpg","--tnpGenLevel", action="store_true", help="Compute tag-and-probe efficiencies for MC as a function of postVFP gen variables")
+parser.add_argument("-tpg", "--tnpGenLevel", action="store_true", help="Compute tag-and-probe efficiencies for MC as a function of postVFP gen variables")
 
-parser.add_argument("-y","--year", help="run year 2016, 2017, 2018",
-                    type=str,default="2016")
-parser.add_argument("-iso","--isoDefinition",help="Choose between the old and new isolation definition, 0 is old, 1 is new", default=1, choices = [0,1], type =int)
+parser.add_argument("-y", "--year", help="run year 2016, 2017, 2018", 
+					type=str, default="2016", choices=["2016","2017","2018"])
+
+parser.add_argument("-iso", "--isoDefinition", help="Choose between the old and new isolation definition, 0 is old, 1 is new", 
+					type=int, default=1, choices=[0,1])
 
 args = parser.parse_args()
 tstart = time.time()
 cpustrat = time.process_time()
 
-if args.isData & args.genLevelEfficiency:
-    raise RuntimeError('\'genLevelEfficiency\' option not supported for data')
+if args.isData & args.genLevelEfficiency: raise RuntimeError('\'genLevelEfficiency\' option not supported for data')
 
-if args.isData & args.tnpGenLevel:
-    raise RuntimeError('\'tnpGenLevel\' option not supported for data')
+if args.isData & args.tnpGenLevel: raise RuntimeError('\'tnpGenLevel\' option not supported for data')
 
-if not args.output_file.endswith(".root"):
-    raise NameError('output_file name must end with \'.root\'')
+if not args.output_file.endswith(".root"): raise NameError('output_file name must end with \'.root\'')
 
 # create output folders if not existing
 outdir = os.path.dirname(os.path.abspath(args.output_file))
@@ -177,7 +182,6 @@ if args.charge and args.efficiency in [2]:
     print("")
 
 
-#print(files)
 filenames = ROOT.std.vector('string')()
 
 for name in files: filenames.push_back(name)
@@ -251,16 +255,21 @@ if args.eventParity < 0:
 elif args.eventParity > 0:
     d = d.Filter("(event % 2) == 0") # even
 
+
+# Opposite/same sign of tag and probes
 doOS = 0 if args.noOppositeCharge else 1
 doOStracking = 0 if args.noOppositeChargeTracking else doOS
 
 SS = 1 if args.SameCharge else 0
 
-if doOS & SS:
-    raise Exception("Both doOS and SS can't be True. Require noOppositeCharge if you really want the Same Sign")
+if doOS & SS: 		  raise Exception("Both doOS and SS can't be True. Require noOppositeCharge if you really want the Same Sign")
+if doOStracking & SS: raise Exception("Both doOStracking and SS can't be True. Require noOppositeChargeTracking if you really want Same Sign")
 
-if doOStracking & SS:
-    raise Exception("Both doOStracking and SS can't be True. Require noOppositeChargeTracking if you rally want Same Sign")
+'''
+# Gen-matching control
+if args.reverseGenMatching and (args.isData==1 or args.isBkg==1):
+	raise Exception("The 'reverse' condition on gen-matching can be applied only when running on mc signal dataset") 
+'''
 
 if (args.isData == 1):
     if (args.year == "2016"): 
@@ -327,7 +336,8 @@ if args.year == "2016":
 else:
     d = d.Define("isTriggeredMuon","hasTriggerMatch2018(Muon_eta, Muon_phi, TrigObj_id, TrigObj_filterBits, TrigObj_eta, TrigObj_phi)")
 
-if (args.isData==1) or (args.isBkg==1):
+
+if args.isData==1:
     d = d.Define("isGenMatchedMuon","createTrues(nMuon)")
 else:
     d = d.Define("GenMuonBare", "GenPart_status == 1 && (GenPart_statusFlags & 1 || (GenPart_statusFlags & (5<<1))) && abs(GenPart_pdgId) == 13")
@@ -374,20 +384,20 @@ f_out = ROOT.TFile(args.output_file, "RECREATE")
     
 ## Tracks for reco efficiency
 if(args.efficiency == 1):
+
     if not (args.genLevelEfficiency):
-
-        if (args.isData==1) or (args.isBkg==1):
+        if (args.noGenMatching or args.isData==1) and not args.reverseGenMatching:
             d = d.Define("isGenMatchedTrack","createTrues(nTrack)")
-        else:
-            d = d.Define("isGenMatchedTrack", "hasGenMatch(GenMuonBare_eta, GenMuonBare_phi, Track_eta, Track_phi)")
-            d = d.Define("GenMatchedIdx", "GenMatchedIdx(GenMuonBare_eta, GenMuonBare_phi, Track_eta, Track_phi)")
-
+		    else:
+            genMatchCut = 0.1 if not args.reverseGenMatching else -0.1
+            d = d.Define("isGenMatchedTrack", f"hasGenMatch(GenMuonBare_eta, GenMuonBare_phi, Track_eta, Track_phi, {genMatchCut})")
+            d = d.Define("GenMatchedIdx", f"GenMatchedIdx(GenMuonBare_eta, GenMuonBare_phi, Track_eta, Track_phi, {genMatchCut})")
+            
         chargeCut = ""
         if args.charge:
             sign= ">" if args.charge > 0 else "<"
             chargeCut = f" && Track_charge {sign} 0"
 
-            
         # define all probes
         d = d.Define("Probe_Tracks", f"Track_pt > 24 && abs(Track_eta) < 2.4 && Track_trackOriginalAlgo != 13 && Track_trackOriginalAlgo != 14 && isGenMatchedTrack && (Track_qualityMask & 4) {chargeCut}")
         # condition for passing probes
@@ -417,11 +427,11 @@ if(args.efficiency == 1):
         d = d.Define("Probe_eta",  "getVariables(TPPairs, Track_eta, 2)")
         d = d.Define("passCondition", "getVariables(TPPairs, passCondition_reco, 2)")
         d = d.Define("failCondition", "!passCondition")
-
+        
         if (args.tnpGenLevel):
             d = d.Redefine("Probe_pt","getGenVariables(TPPairs,GenMatchedIdx,GenMuonBare_pt,2)")
             d = d.Redefine("Probe_eta","getGenVariables(TPPairs,GenMatchedIdx,GenMuonBare_eta,2)")
-        
+          
         d = d.Define("Probe_pt_pass",  "Probe_pt[passCondition]")
         d = d.Define("Probe_eta_pass", "Probe_eta[passCondition]")
         d = d.Define("TPmass_pass", "TPmass[passCondition]")
@@ -446,11 +456,12 @@ if(args.efficiency == 1):
 #Global|MergedStandAloneMuon ("tracking" efficiency)
 elif (args.efficiency == 2):
     if not (args.genLevelEfficiency):
-        if (args.isData==1) or (args.isBkg==1):
+        if (args.noGenMatching or args.isData==1) and not args.reverseGenMatching:
             d = d.Define("isGenMatchedMergedStandMuon", "createTrues(nMergedStandAloneMuon)")
         else:
-            d = d.Define("isGenMatchedMergedStandMuon","hasGenMatch(GenMuonBare_eta, GenMuonBare_phi, MergedStandAloneMuon_eta, MergedStandAloneMuon_phi, 0.3)")
-            d = d.Define("GenMatchedIdx","GenMatchedIdx(GenMuonBare_eta, GenMuonBare_phi, MergedStandAloneMuon_eta, MergedStandAloneMuon_phi, 0.3)")
+            genMatchCut = 0.3 if not args.reverseGenMatching else -0.3
+            d = d.Define("isGenMatchedMergedStandMuon", f"hasGenMatch(GenMuonBare_eta, GenMuonBare_phi, MergedStandAloneMuon_eta, MergedStandAloneMuon_phi, {genMatchCut})")
+            d = d.Define("GenMatchedIdx", f"GenMatchedIdx(GenMuonBare_eta, GenMuonBare_phi, MergedStandAloneMuon_eta, MergedStandAloneMuon_phi, {genMatchCut})")
 
         # All probes, standalone muons from MergedStandAloneMuon_XX    
         d = d.Define("Probe_MergedStandMuons",f"MergedStandAloneMuon_pt > 15 && abs(MergedStandAloneMuon_eta) < 2.4 && isGenMatchedMergedStandMuon && MergedStandAloneMuon_numberOfValidHits >= {minStandaloneNumberOfValidHits}")
@@ -467,6 +478,7 @@ elif (args.efficiency == 2):
 
         d = d.Define("Probe_pt",  "getVariables(TPPairs, MergedStandAloneMuon_pt,  2)")
         d = d.Define("Probe_eta", "getVariables(TPPairs, MergedStandAloneMuon_eta, 2)")
+        d = d.Define("Probe_phi", "getVariables(TPPairs, MergedStandAloneMuon_phi, 2)")
 
         if (args.tnpGenLevel):
             d = d.Redefine("Probe_pt","getGenVariables(TPPairs,GenMatchedIdx,GenMuonBare_pt,2)")
@@ -481,14 +493,12 @@ elif (args.efficiency == 2):
         # Note: no need to enforce the number of valid hits of the standalone track for the global muon,
         ##      since it is already embedded in the denominator
         ##      and the matching already ensures it is propagated to the numerator
-        d = d.Define("passCondition_tracking",
-                     "Probe_isMatched(TPPairs, MergedStandAloneMuon_extraIdx, Muon_standaloneExtraIdx, Muon_forTracking)")
+        d = d.Define("passCondition_tracking", "Probe_isMatched(TPPairs, MergedStandAloneMuon_extraIdx, Muon_standaloneExtraIdx, Muon_forTracking)")
         # the following was equivalent but with an additional check between probe and tag, to exclude having the same inner track, it should not be necessary
-        #d = d.Define("passCondition_tracking",
-        #             "Probe_isGlobal_checkExtraIdxTagInnerTrack(TPPairs, MergedStandAloneMuon_extraIdx, Muon_standaloneExtraIdx, Muon_forTracking, Tag_inExtraIdx, Muon_innerTrackExtraIdx)")
+        #d = d.Define("passCondition_tracking", "Probe_isGlobal_checkExtraIdxTagInnerTrack(TPPairs, MergedStandAloneMuon_extraIdx, Muon_standaloneExtraIdx, Muon_forTracking, Tag_inExtraIdx, Muon_innerTrackExtraIdx)")
         d = d.Define("passCondition", "getVariables(TPPairs, passCondition_tracking, 2)")
         d = d.Define("failCondition", "!passCondition")
-        
+
         # use the minimum pt of the standalone muon used above to define the range, also a larger upper edge because the pt resolution of standalone muons is bad
         #binning_pt = array('d',[15., 80.]) # try also 24,65
         #binning_pt = array('d',[15., 30., 45., 60., 80.])
@@ -496,7 +506,7 @@ elif (args.efficiency == 2):
         #binning_pt = array('d',[24., 65.])
         binning_pt = array('d',[24., 35., 45., 55., 65.])
         #binning_pt = array('d',[(15.0 + i*1.0) for i in range(66) ])
-        
+
         # Here we are using the muon variables to calulate the mass for the passing probes for tracking efficiency
         ## However the TPPairs were made using indices from MergedStandAloneMuon_XX collections, which are not necessarily valid for Muon_XX
         ## Thus, for each passing MergedStandAloneMuon I store the pt,eta,phi of the corresponding Muon (which exists as long as we use the MergedStandAloneMuon indices from TPPairs_pass)
@@ -513,7 +523,7 @@ elif (args.efficiency == 2):
         d = d.Define("TPmass_fail",    "TPmass[failCondition]")
         d = d.Define("Probe_pt_fail",  "Probe_pt[failCondition]")
         d = d.Define("Probe_eta_fail", "Probe_eta[failCondition]")
-        
+
         print("Making histograms for tracking step")
         makeAndSaveHistograms(d, histo_name, "Tracking", binning_mass, binning_pt, binning_eta)
 
@@ -522,9 +532,7 @@ elif (args.efficiency == 2):
         # do it also for data in case we want to check the difference in the efficiencies
         d = d.Define("TPmassFromSA_pass", "TPmass[passCondition]")
         makeAndSaveOneHist(d, f"{histo_name}_alt", "Tracking (mass from SA muons)",
-                           binning_mass, binning_pt, binning_eta,
-                           massVar="TPmassFromSA", isPass=True)
- 
+                           binning_mass, binning_pt, binning_eta, massVar="TPmassFromSA", isPass=True)
         
     else:
         d = d.Define("goodmuon","goodmuonglobal(goodgeneta,goodgenphi,Muon_pt,Muon_eta,Muon_phi,Muon_isGlobal,Muon_standalonePt,Muon_standaloneEta,Muon_standalonePhi)").Define("newweight","weight*goodmuon")
@@ -537,17 +545,20 @@ elif (args.efficiency == 2):
 
         pass_histogram_reco.Write()
         pass_histogram_norm.Write()
+        
 
 ## Muons for all other efficiency step except veto
 elif args.efficiency != 7:
-    if (args.isData!=1) and (args.isBkg!=1):
-        d = d.Define("GenMatchedIdx","GenMatchedIdx(GenMuonBare_eta, GenMuonBare_phi, Muon_eta, Muon_phi)")
-
+    
+    if not (args.noGenMatching or args.isData==1) or args.reverseGenMatching:
+        genMatchCut = 0.3 if not args.reverseGenMatching else -0.3
+        d = d.Define("GenMatchedIdx","GenMatchedIdx(GenMuonBare_eta, GenMuonBare_phi, Muon_eta, Muon_phi, genMatchCut)")
+        
     chargeCut = ""
     if args.charge:
         sign= ">" if args.charge > 0 else "<"
         chargeCut = f" && Muon_charge {sign} 0"
-        
+     
     d = d.Define("globalMuon_standaloneNvalidHits", "getGlobalMuon_MergedStandAloneMuonVar(Muon_standaloneExtraIdx, MergedStandAloneMuon_extraIdx, MergedStandAloneMuon_numberOfValidHits)")
     d = d.Define("BasicProbe_Muons", f"Muon_isGlobal && Muon_pt > 24 && Muon_standalonePt > 15 && abs(Muon_eta) < 2.4 && selfDeltaR(Muon_eta, Muon_phi, Muon_standaloneEta, Muon_standalonePhi) < 0.3 && Muon_highPurity && isGenMatchedMuon {chargeCut} && globalMuon_standaloneNvalidHits >= {minStandaloneNumberOfValidHits}")
     # add MergedStandAloneMuon_numberOfValidHits > 0 matching the global muon to its standalone one 
@@ -560,7 +571,7 @@ elif args.efficiency != 7:
         massHigh = 120
     binning_mass = array('d',[massLow + i for i in range(int(1+massHigh-massLow))])
     massCut = f"All_TPmass > {massLow} && All_TPmass < {massHigh}"
-
+    
     d = d.Define("TPPairs", f"All_TPPairs[{massCut}]")
     # call it BasicTPmass so it can be filtered later without using Redefine, but an appropriate Define
     d = d.Define("BasicTPmass",  f"All_TPmass[{massCut}]")

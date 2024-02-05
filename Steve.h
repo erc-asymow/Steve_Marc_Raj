@@ -331,6 +331,7 @@ RVec<Bool_t> hasTriggerMatch2018(RVec<Float_t> &Muon_eta, RVec<Float_t> &Muon_ph
   return TriggerMatch;
 }
 
+/*
 RVec<Bool_t> hasGenMatch(RVec<Int_t> &GenPart_pdgId, RVec<Int_t> &GenPart_status,
 			 RVec<Int_t> &GenPart_statusFlags, RVec<Float_t> &GenPart_eta,
 			 RVec<Float_t> &GenPart_phi, RVec<Float_t> &Cand_eta, 
@@ -359,7 +360,6 @@ RVec<Bool_t> hasGenMatch(RVec<Int_t> &GenPart_pdgId, RVec<Int_t> &GenPart_status
   return isGenMatched;
 }
 
-
 RVec<Int_t> GenMatchedIdx(RVec<Int_t> &GenPart_pdgId, RVec<Int_t> &GenPart_status,RVec<Int_t> &GenPart_statusFlags,RVec<Float_t> &GenPart_eta,RVec<Float_t> &GenPart_phi,RVec<Float_t> &Cand_eta, RVec<Float_t> &Cand_phi, const float coneDR = 0.1){
   RVec<Int_t> isGenMatched;  
   for(int iCand=0;iCand<Cand_eta.size();iCand++){
@@ -381,6 +381,55 @@ RVec<Int_t> GenMatchedIdx(RVec<Int_t> &GenPart_pdgId, RVec<Int_t> &GenPart_statu
   }
   return isGenMatched;
 }
+*/
+
+// USE THE FOLLOWING TWO FUNCTIONS
+/*
+// use directly the collection of gen muons define in the apporpriate way
+RVec<Bool_t> hasGenMatch(RVec<Float_t> &Gen_eta, RVec<Float_t> &Gen_phi,
+                         RVec<Float_t> &Cand_eta, RVec<Float_t> &Cand_phi,
+                         const float coneDR = 0.1)
+{
+	RVec<Bool_t> isGenMatched;  
+	float tmpDR = 0.0; // utility variable filled below everytime
+	for(int iCand=0;iCand<Cand_eta.size();iCand++) {
+		bool matchMC = false;   
+		float mcmatch_tmp_dr = 999.;
+		for(unsigned int iGen=0; iGen<Gen_eta.size(); iGen++) {
+			tmpDR = deltaR(Cand_eta[iCand], Cand_phi[iCand], Gen_eta[iGen], Gen_phi[iGen]);
+			if (tmpDR < mcmatch_tmp_dr) {
+				mcmatch_tmp_dr = tmpDR;
+			} 
+		}
+		if (mcmatch_tmp_dr < coneDR) matchMC = true;
+		isGenMatched.push_back(matchMC);
+	}
+	return isGenMatched;
+}
+
+
+RVec<Int_t> GenMatchedIdx(RVec<Float_t> &GenPart_eta, RVec<Float_t> &GenPart_phi,
+						  RVec<Float_t> &Cand_eta, RVec<Float_t> &Cand_phi, 
+						  const float coneDR = 0.1)
+{
+	RVec<Int_t> isGenMatched(Cand_eta.size(), -1); //  fill with proper size and initialize to -1  
+	float tmpDR = 0.0; // utility variable filled below everytime
+	for(int iCand=0;iCand<Cand_eta.size();iCand++){
+		int matchIdx = -1;   
+		float mcmatch_tmp_dr = 999.;
+		for(unsigned int iGen=0; iGen<GenPart_eta.size(); iGen++) {
+		    tmpDR = deltaR(Cand_eta[iCand], Cand_phi[iCand], GenPart_eta[iGen], GenPart_phi[iGen]);
+		    if (tmpDR < mcmatch_tmp_dr) {
+		        mcmatch_tmp_dr = tmpDR;
+		        matchIdx=iGen;
+		    } 
+		}
+		if (mcmatch_tmp_dr < coneDR) isGenMatched[iCand] = matchIdx;
+		else isGenMatched[iCand] = -1;
+	}
+	return isGenMatched;
+}
+*/
 
 
 // use directly the collection of gen muons define in the apporpriate way
@@ -388,43 +437,46 @@ RVec<Bool_t> hasGenMatch(RVec<Float_t> &Gen_eta, RVec<Float_t> &Gen_phi,
                          RVec<Float_t> &Cand_eta, RVec<Float_t> &Cand_phi,
                          const float coneDR = 0.1)
 {
-  RVec<Bool_t> isGenMatched;  
-  float tmpDR = 0.0; // utility variable filled below everytime
-  for(int iCand=0;iCand<Cand_eta.size();iCand++){
-    bool matchMC = false;   
-    float mcmatch_tmp_dr = 999.;
-    for(unsigned int iGen=0; iGen<Gen_eta.size(); iGen++){
-        tmpDR = deltaR(Cand_eta[iCand], Cand_phi[iCand], Gen_eta[iGen], Gen_phi[iGen]);
-        if (tmpDR < mcmatch_tmp_dr){
-            mcmatch_tmp_dr = tmpDR;
-        } 
-    }
-    if (mcmatch_tmp_dr < coneDR) matchMC = true;
-    isGenMatched.push_back(matchMC);
-  }
-  return isGenMatched;
+	RVec<Bool_t> isGenMatched;  
+	float tmpDR = 0.0; // utility variable filled below everytime
+	for(int iCand=0;iCand<Cand_eta.size();iCand++) {
+		bool matchMC = false;   
+		float mcmatch_tmp_dr = 999.;
+		for(unsigned int iGen=0; iGen<Gen_eta.size(); iGen++) {
+			tmpDR = deltaR(Cand_eta[iCand], Cand_phi[iCand], Gen_eta[iGen], Gen_phi[iGen]);
+			if (tmpDR < mcmatch_tmp_dr) {
+				mcmatch_tmp_dr = tmpDR;
+			} 
+		}
+		if ( (coneDR>0 && mcmatch_tmp_dr<coneDR) || (coneDR<0 && mcmatch_tmp_dr>-coneDR) )  matchMC = true;
+		isGenMatched.push_back(matchMC);
+	}
+	return isGenMatched;
 }
 
 
-RVec<Int_t> GenMatchedIdx(RVec<Float_t> &GenPart_eta,RVec<Float_t> &GenPart_phi,RVec<Float_t> &Cand_eta, RVec<Float_t> &Cand_phi, const float coneDR = 0.1){
-
-    RVec<Int_t> isGenMatched(Cand_eta.size(), -1); //  fill with proper size and initialize to -1  
-    float tmpDR = 0.0; // utility variable filled below everytime
-    for(int iCand=0;iCand<Cand_eta.size();iCand++){
-        int matchIdx = -1;   
-        float mcmatch_tmp_dr = 999.;
-        for(unsigned int iGen=0; iGen<GenPart_eta.size(); iGen++){
-            tmpDR = deltaR(Cand_eta[iCand], Cand_phi[iCand], GenPart_eta[iGen], GenPart_phi[iGen]);
-            if (tmpDR < mcmatch_tmp_dr){
-                mcmatch_tmp_dr = tmpDR;
-                matchIdx=iGen;
-            } 
-        }
-        if (mcmatch_tmp_dr < coneDR) isGenMatched[iCand] = matchIdx;
-        else isGenMatched[iCand] = -1;
-    }
-    return isGenMatched;
+RVec<Int_t> GenMatchedIdx(RVec<Float_t> &GenPart_eta, RVec<Float_t> &GenPart_phi,
+						  RVec<Float_t> &Cand_eta, RVec<Float_t> &Cand_phi, 
+						  const float coneDR = 0.1)
+{
+	RVec<Int_t> isGenMatched(Cand_eta.size(), -1); //  fill with proper size and initialize to -1  
+	float tmpDR = 0.0; // utility variable filled below everytime
+	for(int iCand=0;iCand<Cand_eta.size();iCand++){
+		int matchIdx = -1;   
+		float mcmatch_tmp_dr = 999.;
+		for(unsigned int iGen=0; iGen<GenPart_eta.size(); iGen++) {
+		    tmpDR = deltaR(Cand_eta[iCand], Cand_phi[iCand], GenPart_eta[iGen], GenPart_phi[iGen]);
+		    if (tmpDR < mcmatch_tmp_dr) {
+		        mcmatch_tmp_dr = tmpDR;
+		        matchIdx=iGen;
+		    } 
+		}
+		if ( (coneDR>0 && mcmatch_tmp_dr<coneDR) || (coneDR<0 && mcmatch_tmp_dr>-coneDR) ) isGenMatched[iCand] = matchIdx;
+		else isGenMatched[iCand] = -1;
+	}
+	return isGenMatched;
 }
+
 
 RVec<Float_t> getTPmass(RVec<std::pair<int,int>> TPPairs,
                         RVec<Float_t> &Muon_pt, RVec<Float_t> &Muon_eta, RVec<Float_t> &Muon_phi, 
@@ -443,6 +495,7 @@ RVec<Float_t> getTPmass(RVec<std::pair<int,int>> TPPairs,
     return TPMass;
     
 }
+
 
 RVec<Float_t> getTPabsDiffZ(RVec<std::pair<int,int>> TPPairs,
                             RVec<Float_t> &tag_Z, RVec<Float_t> &probe_Z)

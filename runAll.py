@@ -46,16 +46,17 @@ workingPoints = { 1: "reco",
 }
 
 inputdir_dict = { "data" : "SingleMuon/", 
-                  "mc" : "DYJetsToMuMu_H2ErratumFix_TuneCP5_13TeV-powhegMiNNLO-pythia8-photos/",
-                  #"mc" : "DYJetsToMuMu_H2ErratumFix_PDFExt_TuneCP5_13TeV-powhegMiNNLO-pythia8-photos/",
-                  "Ztautau" : "DYJetsToTauTau_M-50_AtLeastOneEorMuDecay_TuneCP5_13TeV-powhegMiNNLO-pythia8-photos/", 
+                  "mc" : ["DYJetsToMuMu_H2ErratumFix_TuneCP5_13TeV-powhegMiNNLO-pythia8-photos/",
+                          "DYJetsToMuMu_H2ErratumFix_PDFExt_TuneCP5_13TeV-powhegMiNNLO-pythia8-photos/",
+                          "DYJetsToMuMu_M-10to50_H2ErratumFix_TuneCP5_13TeV-powhegMiNNLO-pythia8-photos/"],
+                  "Ztautau" : "DYJetsToTauTau_M-50_AtLeastOneEorMuDecay_H2ErratumFix_TuneCP5_13TeV-powhegMiNNLO-pythia8-photos/",
                   "TTFullyleptonic" : "TTTo2L2Nu_TuneCP5_13TeV-powheg-pythia8/",
                   "TTSemileptonic" : "TTToSemiLeptonic_TuneCP5_13TeV-powheg-pythia8/",
                   "WplusJets" : "WplusJetsToMuNu_H2ErratumFix_TuneCP5_13TeV-powhegMiNNLO-pythia8-photos/",
                   "WminusJets" : "WminusJetsToMuNu_H2ErratumFix_TuneCP5_13TeV-powhegMiNNLO-pythia8-photos/",
                   "ZZ" : "ZZTo2L2Nu_TuneCP5_13TeV_powheg_pythia8/", 
-                  "WZ" :"WZ_TuneCP5_13TeV-pythia8/", 
-                  "WW" : "WW_TuneCP5_13TeV-pythia8/"
+                  "WZ" : "WZ_TuneCP5_13TeV-pythia8/", 
+                  "WW" : "WWTo2L2Nu_TuneCP5_13TeV-powheg-pythia8" #"WW_TuneCP5_13TeV-pythia8/"
 }
 #inputdir_data = "SingleMuon/"
 #inputdir_mc   = "DYJetsToMuMu_H2ErratumFix_TuneCP5_13TeV-powhegMiNNLO-pythia8-photos/"
@@ -83,7 +84,8 @@ if __name__ == "__main__":
     parser.add_argument('-d',  '--dryRun', action='store_true', help='Do not execute commands, just print them')
 
     parser.add_argument('-r',  '--run', help='Choose what to run, either data or MC, or both',
-    					type=str, default="all", choices=["data", "mc", "stand", "bkg", "Ztautau", "TTSemileptonic", "TTFullyleptonic", "WplusJets", "WminusJets", "ZZ", "WZ", "WW", "all"])
+    					default=["all"], nargs="*",
+    					choices=["data", "mc", "stand", "bkg", "Ztautau", "TTSemileptonic", "TTFullyleptonic", "WplusJets", "WminusJets", "ZZ", "WZ", "WW", "all"])
                     
     # FIXME: unless I change histogram names inside the files I can't merge different working points, I could just merge data with MC but not worth
     #parser.add_argument('-m',  '--merge', action='store_true', help='Merge root files in a new one')
@@ -149,16 +151,17 @@ if __name__ == "__main__":
         safeSystem(f"mkdir -p {outdir}", dryRun=False)
     
     toRun = []
-    if args.run in ["all", "data","stand"]: toRun.append("data")
-    if args.run in ["all", "mc",  "stand"]: toRun.append("mc")
-    if args.run in ["all", "bkg", "Ztautau"]: 		  toRun.append("Ztautau")
-    if args.run in ["all", "bkg", "TTFullyleptonic"]: toRun.append("TTFullyleptonic")
-    if args.run in ["all", "bkg", "TTSemileptonic"]:  toRun.append("TTSemileptonic")
-    if args.run in ["all", "bkg", "WplusJets"]:	 toRun.append("WplusJets")
-    if args.run in ["all", "bkg", "WminusJets"]: toRun.append("WminusJets")
-    if args.run in ["all", "bkg", "ZZ"]: toRun.append("ZZ")
-    if args.run in ["all", "bkg", "WZ"]: toRun.append("WZ")
-    if args.run in ["all", "bkg", "WW"]: toRun.append("WW")
+    for dataset_run in args.run:
+        if dataset_run in ["all", "data","stand"]: toRun.append("data")
+        if dataset_run in ["all", "mc",  "stand"]: toRun.append("mc")
+        if dataset_run in ["all", "bkg", "Ztautau"]: 		  toRun.append("Ztautau")
+        if dataset_run in ["all", "bkg", "TTFullyleptonic"]: toRun.append("TTFullyleptonic")
+        if dataset_run in ["all", "bkg", "TTSemileptonic"]:  toRun.append("TTSemileptonic")
+        if dataset_run in ["all", "bkg", "WplusJets"]:	 toRun.append("WplusJets")
+        if dataset_run in ["all", "bkg", "WminusJets"]: toRun.append("WminusJets")
+        if dataset_run in ["all", "bkg", "ZZ"]: toRun.append("ZZ")
+        if dataset_run in ["all", "bkg", "WZ"]: toRun.append("WZ")
+        if dataset_run in ["all", "bkg", "WW"]: toRun.append("WW")
    
    
     outfiles = [] # store names of output files so to merge them if needed
@@ -180,7 +183,10 @@ if __name__ == "__main__":
         isdata = 1 if xrun == "data" else 0
         isBkg = isBkg_dict[xrun]
         #inpath = indir + (inputdir_data if isdata else inputdir_mc)
-        inpath = indir + inputdir_dict[xrun]
+        
+        input_datasets = [inputdir_dict[xrun]] if type(inputdir_dict[xrun]) is str else inputdir_dict[xrun]
+        inpaths = [indir + in_path for in_path in input_datasets]
+        
         for wp in workingPoints.keys():            
             if args.exclude and wp in args.exclude:
                 continue
@@ -200,7 +206,13 @@ if __name__ == "__main__":
                     else:
                         outfile = f"{outdir}tnp_{step}_{xrun}_{postfix}.root"
                     outfiles.append(outfile)
-                    cmd = f"python {executable} -i {inpath} -o {outfile} -d {isdata} -b {isBkg} -e {wp} -c {ch} -p {parity} -y {args.year} -iso {args.isoDefinition}"
+                    
+                    inpaths_cmd = ""
+                    for inpath in inpaths: 
+                        inpaths_cmd = inpaths_cmd + inpath + " "
+                    
+                    
+                    cmd = f"python {executable} -i {inpaths_cmd} -o {outfile} -d {isdata} -b {isBkg} -e {wp} -c {ch} -p {parity} -y {args.year} -iso {args.isoDefinition}"
                     cmd += commonOption
                     if args.noVertexPileupWeight:
                         cmd += " -nw"

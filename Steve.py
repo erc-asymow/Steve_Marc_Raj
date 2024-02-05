@@ -57,13 +57,6 @@ def makeAndSaveHistograms(d, histo_name, histo_title, binning_mass, binning_pt, 
     makeAndSaveOneHist(d, histo_name, histo_title, binning_mass, binning_pt, binning_eta, massVar, isPass=True)
     makeAndSaveOneHist(d, histo_name, histo_title, binning_mass, binning_pt, binning_eta, massVar, isPass=False)
     
-    ######
-    model_deltaR = ROOT.RDF.TH1DModel(f"dR", f"dR(probe,gen)", 320, 0, 5.5)
-    deltaR_hist = d.Histo1D(model_deltaR, "dR_SA_gen_fail")
-    print(deltaR_hist.Integral())
-    deltaR_hist.Write()
-    ######
-    
 
 
 def make_jsonhelper(filename):
@@ -533,10 +526,6 @@ elif (args.efficiency == 2):
 		d = d.Define("Probe_pt_fail",  "Probe_pt[failCondition]")
 		d = d.Define("Probe_eta_fail", "Probe_eta[failCondition]")
 
-		####
-		d = d.Define("dR_SA_gen", "coll1coll2DR(Probe_eta, Probe_phi, GenMuonBare_eta, GenMuonBare_phi)")
-		d = d.Define("dR_SA_gen_fail", "dR_SA_gen[failCondition]")
-		####
 		print("Making histograms for tracking step")
 		makeAndSaveHistograms(d, histo_name, "Tracking", binning_mass, binning_pt, binning_eta)
 

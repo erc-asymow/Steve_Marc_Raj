@@ -305,7 +305,7 @@ else:
 
     
 ## For Tag Muons
-if args.year == 2016:
+if args.year == "2016":
     d = d.Define("isTriggeredMuon","hasTriggerMatch(Muon_eta, Muon_phi, TrigObj_id, TrigObj_filterBits, TrigObj_eta, TrigObj_phi)")
 else:
     d =d.Define("isTriggeredMuon","hasTriggerMatch2018(Muon_eta, Muon_phi, TrigObj_id, TrigObj_filterBits, TrigObj_eta, TrigObj_phi)")

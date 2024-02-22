@@ -73,8 +73,8 @@ parser.add_argument("-e","--efficiency",
                     type=int, choices=range(1,9))
 parser.add_argument("--vetoStrategy",
                     default=0,
-		    help="Different definition for veto efficiency",
-                    type=int, choices=range(2))
+		    help="Different definition for veto efficiency (check code for details)",
+                    type=int, choices=range(3))
 
 #parser.add_argument("-i","--input_path", help="path of the input root files", type=str)
 
@@ -877,9 +877,20 @@ else:
     else:
         d = d.Define("isGenMatchedTrack", "hasGenMatch(  GenMuonBare_eta, GenMuonBare_phi, Track_eta, Track_phi)")
         d = d.Define("GenMatchedIdx",     "GenMatchedIdx(GenMuonBare_eta, GenMuonBare_phi, Track_eta, Track_phi)")
-    #
-    # FIXME: only tracker-seeded tracks here?
-    d = d.Define("BasicProbe_Muons", "Track_pt > 10 && abs(Track_eta) < 2.4 && Track_trackOriginalAlgo != 13 && Track_trackOriginalAlgo != 14 && isGenMatchedTrack && (Track_qualityMask & 4)")
+
+    # globalMuon_ is equivalent to the Muon_ collection
+    d = d.Define("globalMuon_standaloneNvalidHits", "getGlobalMuon_MergedStandAloneMuonVar(Muon_standaloneExtraIdx, MergedStandAloneMuon_extraIdx, MergedStandAloneMuon_numberOfValidHits)")
+    if args.vetoStrategy == 0:
+        # denominator is the numerator of tracking step
+        # must explicitly cut on the standalone number of valid hits for the global muon to be consistent
+        d = d.Define("BasicProbe_Muons", f"Muon_pt > 10 && abs(Muon_eta) < 2.4 && Muon_standalonePt > 15 && selfDeltaR(Muon_eta, Muon_phi, Muon_standaloneEta, Muon_standalonePhi) < 0.3 && Muon_highPurity && Muon_isGlobal && globalMuon_standaloneNvalidHits >= {minStandaloneNumberOfValidHits} && isGenMatchedMuon")
+    elif args.vetoStrategy == 1:
+        # denominator is any track (not necessarily only tracker- or muon-seeded,
+        # since at numerator both global and tracker muons would be used
+        d = d.Define("BasicProbe_Muons", "Track_pt > 15 && abs(Track_eta) < 2.4 && isGenMatchedTrack && (Track_qualityMask & 4)")
+    elif args.vetoStrategy == 2:
+        # as before but restricting to tracker-seeded tracks to use global muons only
+        d = d.Define("BasicProbe_Muons", "Track_pt > 15 && abs(Track_eta) < 2.4 && isGenMatchedTrack && (Track_qualityMask & 4) && Track_trackOriginalAlgo != 13 && Track_trackOriginalAlgo != 14")
 
     d = d.Define("All_TPPairs", f"CreateTPPair(Tag_Muons, BasicProbe_Muons, {doOS}, Tag_charge, Track_charge, Tag_inExtraIdx, Track_extraIdx)")
     d = d.Define("All_TPmass","getTPmass(All_TPPairs, Tag_pt, Tag_eta, Tag_phi, Track_pt, Track_eta, Track_phi)")
@@ -890,7 +901,7 @@ else:
 
     # overriding previous pt binning
     ## FIXME: to optimize
-    binning_pt = array('d',[(10. + 5.*i) for i in range(12)]) # from MC truth the efficiency of the veto is flat versus pt from 20 to 65 GeV
+    binning_pt = array('d',[(15. + 5.*i) for i in range(11)]) # from MC truth the efficiency of the veto is pretty flat versus pt
 
     d = d.Define("TPPairs", f"All_TPPairs[{massCut}]")
     # call it BasicTPmass so it can be filtered later without using Redefine, but an appropriate Define
@@ -901,10 +912,19 @@ else:
     d = d.Define("BasicProbe_pt",     "getVariables(TPPairs, Track_pt,     2)")
     d = d.Define("BasicProbe_eta",    "getVariables(TPPairs, Track_eta,    2)")
 
-    # no need to require at least one valid hit for the standalone when the muon is global (I think)
-    #d = d.Define("globalMuon_standaloneNvalidHits", "getGlobalMuon_MergedStandAloneMuonVar(Muon_standaloneExtraIdx, MergedStandAloneMuon_extraIdx, MergedStandAloneMuon_numberOfValidHits)")
-    #d = d.Define("vetoMuons", f"Muon_pt > 10 && abs(Muon_eta) < 2.4 && ((Muon_isGlobal && globalMuon_standaloneNvalidHits >= {minStandaloneNumberOfValidHits}) || Muon_isTracker) && Muon_innerTrackOriginalAlgo != 13 && Muon_innerTrackOriginalAlgo != 14 && Muon_looseId && abs(Muon_dxybs) < 0.05 && Muon_highPurity")
-    d = d.Define("vetoMuons", "Muon_pt > 10 && abs(Muon_eta) < 2.4 && (Muon_isGlobal || Muon_isTracker) && Muon_innerTrackOriginalAlgo != 13 && Muon_innerTrackOriginalAlgo != 14 && Muon_looseId && abs(Muon_dxybs) < 0.05 && Muon_highPurity")
+    if args.vetoStrategy == 0:
+        # measured on top of reco and tracking steps (so basically on top of tracking)
+        d = d.Define("vetoMuons", "BasicProbe_Muons && Muon_looseId && abs(Muon_dxybs) < 0.05")
+    elif args.vetoStrategy == 1:
+        # measured from any track, using both global and tracker muons
+        # TODO: should there be additional criteria when the muon is global?
+        #       Maybe not needed since we don't have them on veto muons
+        d = d.Define("vetoMuons", "Muon_pt > 10 && abs(Muon_eta) < 2.4 && (Muon_isGlobal || Muon_isTracker) && Muon_looseId && abs(Muon_dxybs) < 0.05 && Muon_highPurity")
+    elif args.vetoStrategy == 2:
+        # as before but restricting to tracker-seeded tracks to use global muons only
+        # also add number of valid hits for the standalone part
+        d = d.Define("vetoMuons", "Muon_pt > 10 && abs(Muon_eta) < 2.4 && Muon_isGlobal && Muon_innerTrackOriginalAlgo != 13 && Muon_innerTrackOriginalAlgo != 14 && Muon_looseId && abs(Muon_dxybs) < 0.05 && Muon_highPurity && globalMuon_standaloneNvalidHits >= {minStandaloneNumberOfValidHits}")
+
     #d = d.Define("passCondition_veto", "coll1coll2DR(Track_eta, Track_phi, Muon_eta[vetoMuons], Muon_phi[vetoMuons]) < 0.1")
     d = d.Define("passCondition_veto",
                  "Probe_isMatched(TPPairs, Track_extraIdx, Muon_innerTrackExtraIdx, vetoMuons)")

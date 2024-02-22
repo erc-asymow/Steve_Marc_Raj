@@ -66,13 +66,13 @@ if __name__ == "__main__":
                         help="Don't require opposite charges between tag and probe (including tracking, unless also using --noOppositeChargeTracking)")
     parser.add_argument(        "--noOppositeChargeTracking", action="store_true",
                                 help="Don't require opposite charges between tag and probe for tracking")
-    parser.add_argument("-sc", "--SameCharge", action="store_true", help="Require the TP Pair to have same sign (fo bkg study)",
+    parser.add_argument("-sc", "--SameCharge", action="store_true", help="Require the TP Pair to have same sign (for bkg study)",
                         default=False)
     parser.add_argument('-s','--steps', default=None, nargs='*', type=int, choices=list(workingPoints.keys()),
                         help='Default runs all working points, but can choose only some if needed')
     parser.add_argument('-x','--exclude', default=None, nargs='*', type=int, choices=list(workingPoints.keys()),
                         help='Default runs all working points, but can choose to skip some if needed')
-    parser.add_argument('-wpc','--workinPointsByCharge', default=["trigger"], nargs='*', type=str, choices=list(workingPoints.values()),
+    parser.add_argument('-wpc','--workinPointsByCharge', default=["reco", "tracking", "idip", "trigger"], nargs='*', type=str, choices=list(workingPoints.values()),
                         help='These steps will be made charge dependent')
     parser.add_argument("-trk", "--trackerMuons", action="store_true",
                         help="Use tracker muons and a different executable")
@@ -87,8 +87,8 @@ if __name__ == "__main__":
     #parser.add_argument('-exe', '--executable', default="Steve.py", type=str, choices=["Steve.py", "Steve_tracker.py"],
     #                    help='Choose script to run')
 
-    parser.add_argument("-y","--year", help="run year 2016, 2017, 2018",
-                    type=str,default="2016")
+    parser.add_argument("-y", "--year", help="Choose year to run",
+                        type=str, default="2016", choices=["2016", "2017", "2018"])
     parser.add_argument("-iso","--isoDefinition",help="Choose between the old and new isolation definition, 0 is old, 1 is new", default=1, type=int, choices = [0,1])
 
 
@@ -133,8 +133,6 @@ if __name__ == "__main__":
         toRun.append("WZ")
     if args.run in ["all", "bkg", "WW"]:
         toRun.append("WW")
-   
-    
 
     outfiles = [] # store names of output files so to merge them if needed
 

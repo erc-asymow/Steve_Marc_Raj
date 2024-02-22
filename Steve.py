@@ -71,6 +71,10 @@ parser = argparse.ArgumentParser()
 parser.add_argument("-e","--efficiency",
 		    help="1 for reco, 2 for \"tracking\", 3 for idip, 4 for trigger, 5 for isolation, 6 for isolation without trigger, 7 for veto, 8 for isolation with failing trigger",
                     type=int, choices=range(1,9))
+parser.add_argument("--vetoStrategy",
+                    default=0,
+		    help="Different definition for veto efficiency",
+                    type=int, choices=range(2))
 
 #parser.add_argument("-i","--input_path", help="path of the input root files", type=str)
 
@@ -100,13 +104,11 @@ parser.add_argument("-p","--eventParity", help="Select events with given parity 
                     type=int, default=0, choices=[-1, 0, 1])
 
 parser.add_argument('-nw', '--noVertexPileupWeight', action='store_true', help='Do not use weights for vertex z position')
-#parser.add_argument("-vpw", "--vertexPileupWeight", action="store_true", help="Use weights for vertex z position versus pileup (only for MC)")
 
 parser.add_argument("-nos", "--noOppositeCharge", action="store_true", help="Don't require opposite charges between tag and probe (including tracking, unless also using --noOppositeChargeTracking)")
 parser.add_argument(        "--noOppositeChargeTracking", action="store_true", help="Don't require opposite charges between tag and probe for tracking")
 
-parser.add_argument("-sc", "--SameCharge", action="store_true", help="Require the TP Pair to have same sign (fo bkg study)",
-                     default=False)
+parser.add_argument("-sc", "--SameCharge", action="store_true", help="Require the TP Pair to have same sign (for bkg study)")
 
 parser.add_argument("-zqt","--zqtprojection", action="store_true", help="Efficiencies evaluated as a function of zqtprojection (only for trigger and isolation)")
 
@@ -114,8 +116,8 @@ parser.add_argument("-gen","--genLevelEfficiency", action="store_true", help="Co
 
 parser.add_argument("-tpg","--tnpGenLevel", action="store_true", help="Compute tag-and-probe efficiencies for MC as a function of postVFP gen variables")
 
-parser.add_argument("-y","--year", help="run year 2016, 2017, 2018",
-                    type=str,default="2016")
+parser.add_argument("-y", "--year", help="Choose year to run",
+                    type=str, default="2016", choices=["2016", "2017", "2018"])
 parser.add_argument("-iso","--isoDefinition",help="Choose between the old and new isolation definition, 0 is old, 1 is new", default=1, choices = [0,1], type =int)
 
 args = parser.parse_args()
@@ -241,20 +243,17 @@ if doOS & SS:
     raise Exception("Both doOS and SS can't be True. Require noOppositeCharge if you really want the Same Sign")
 
 if doOStracking & SS:
-    raise Exception("Both doOStracking and SS can't be True. Require noOppositeChargeTracking if you rally want Same Sign")
+    raise Exception("Both doOStracking and SS can't be True. Require noOppositeChargeTracking if you really want Same Sign")
 
 if (args.isData == 1):
     if (args.year == "2016"): 
         jsonhelper = make_jsonhelper("Cert_271036-284044_13TeV_Legacy2016_Collisions16_JSON.txt")
-        d = d.Filter(jsonhelper,["run","luminosityBlock"],"jsonfilter")
     elif (args.year == "2018"):
         jsonhelper = make_jsonhelper("utility/Cert_314472-325175_13TeV_UL2018_Collisions18_HLT_IsoMu24_v_CustomJSON.txt")
-        d = d.Filter(jsonhelper,["run","luminosityBlock"],"jsonfilter")
     elif (args.year == "2017"):
-        print("2017  is not yet supported")
-    else:
-        print("Please provide correct year")
-
+        print("2017 is not yet supported")
+        quit()
+    d = d.Filter(jsonhelper,["run","luminosityBlock"],"jsonfilter")
 
 ## Weights
 
@@ -271,9 +270,6 @@ else:
                 input_vertexWeight = "./utility/vtx_reweight_2dPUandbeamspot2017.root"
             elif (args.year == "2018"):
                 input_vertexWeight = "./utility/vtx_reweight_2dPUandbeamspot2018.root"
-            else:
-                print("Please provide a correct year")
-                sys.exit(1)
             ROOT.initializeVertexPileupWeights(input_vertexWeight,args.year)
             d = d.Define("vertex_weight", "_get_vertexPileupWeight(GenVtx_z,Pileup_nTrueInt,2)")
     else:
@@ -291,21 +287,14 @@ else:
             elif(args.year == "2018"):
                 input_PU_mc = "./utility/MC2018PU.root"
                 input_PU_data = "./utility/pileupHistogram-customJSON-UL2018-69200ub-99bins.root"
-            else:
-                print("Please provide a correct year")
-                sys.exit(1)
             ROOT.initializePileupWeights(input_PU_mc,input_PU_data)
             d = d.Define("pu_weight", "_get_PileupWeight(Pileup_nTrueInt,2)")
             #d = d.Define("pu_weight", "puw_2016(Pileup_nTrueInt,2)") # 2 is for postVFP
-
  
     d = d.Define("weight", "gen_weight*pu_weight*vertex_weight")
     
-
-
-    
 ## For Tag Muons
-if args.year == 2016:
+if args.year == "2016":
     d = d.Define("isTriggeredMuon","hasTriggerMatch(Muon_eta, Muon_phi, TrigObj_id, TrigObj_filterBits, TrigObj_eta, TrigObj_phi)")
 else:
     d =d.Define("isTriggeredMuon","hasTriggerMatch2018(Muon_eta, Muon_phi, TrigObj_id, TrigObj_filterBits, TrigObj_eta, TrigObj_phi)")

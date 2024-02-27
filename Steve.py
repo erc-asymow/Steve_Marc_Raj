@@ -397,7 +397,7 @@ if(args.efficiency == 1):
         d = d.Define("Probe_pt_fail",  "Probe_pt[failCondition]")
         d = d.Define("Probe_eta_fail", "Probe_eta[failCondition]")
         d = d.Define("TPmass_fail", "TPmass[failCondition]")
-        makeAndSaveHistograms(d, histo_name, "Reco", binning_mass, binning_pt, binning_eta, scaleFactor=weightSum.GetValue())
+        makeAndSaveHistograms(d, histo_name, "Reco", binning_mass, binning_pt, binning_eta, scaleFactor=1.0/weightSum.GetValue())
         
     else:
         d = d.Define("goodmuon","goodmuonreco(goodgeneta,goodgenphi,MergedStandAloneMuon_pt,MergedStandAloneMuon_eta,MergedStandAloneMuon_phi)").Define("newweight","weight*goodmuon")
@@ -483,7 +483,7 @@ elif (args.efficiency == 2):
         d = d.Define("Probe_pt_fail",  "Probe_pt[failCondition]")
         d = d.Define("Probe_eta_fail", "Probe_eta[failCondition]")
 
-        makeAndSaveHistograms(d, histo_name, "Tracking", binning_mass, binning_pt, binning_eta, scaleFactor=weightSum.GetValue())
+        makeAndSaveHistograms(d, histo_name, "Tracking", binning_mass, binning_pt, binning_eta, scaleFactor=1.0/weightSum.GetValue())
 
         # save also the mass for passing probes computed with standalone variables
         # needed when making MC template for failing probes using all probes, since the mass should be consistently measured for both cases
@@ -491,7 +491,7 @@ elif (args.efficiency == 2):
         d = d.Define("TPmassFromSA_pass", "TPmass[passCondition]")
         makeAndSaveOneHist(d, f"{histo_name}_alt", "Tracking (mass from SA muons)",
                            binning_mass, binning_pt, binning_eta,
-                           massVar="TPmassFromSA", isPass=True, scaleFactor=weightSum.GetValue())
+                           massVar="TPmassFromSA", isPass=True, scaleFactor=1.0/weightSum.GetValue())
         
     else:
         d = d.Define("goodmuon","goodmuonglobal(goodgeneta,goodgenphi,Muon_pt,Muon_eta,Muon_phi,Muon_isGlobal,Muon_standalonePt,Muon_standaloneEta,Muon_standalonePhi)").Define("newweight","weight*goodmuon")
@@ -572,7 +572,7 @@ elif args.efficiency != 7:
             d = d.Define("Probe_pt_fail",  "BasicProbe_pt[failCondition]")
             d = d.Define("Probe_eta_fail", "BasicProbe_eta[failCondition]")
             d = d.Define("TPmass_fail",    "BasicTPmass[failCondition]")
-            makeAndSaveHistograms(d, histo_name, "IDIP", binning_mass, binning_pt, binning_eta, scaleFactor=weightSum.GetValue())
+            makeAndSaveHistograms(d, histo_name, "IDIP", binning_mass, binning_pt, binning_eta, scaleFactor=1.0/weightSum.GetValue())
         else:
             d = d.Define("goodmuon","goodmuonglobal(goodgeneta,goodgenphi,Muon_pt,Muon_eta,Muon_phi,Muon_isGlobal,Muon_standalonePt,Muon_standaloneEta,Muon_standalonePhi,Muon_dxybs,Muon_mediumId)")
             d = d.Define("newweight","weight*goodmuon")
@@ -657,7 +657,7 @@ elif args.efficiency != 7:
 
         else:
             if not (args.genLevelEfficiency):
-                makeAndSaveHistograms(d, histo_name, "Trigger", binning_mass, binning_pt, binning_eta, scaleFactor=weightSum.GetValue())
+                makeAndSaveHistograms(d, histo_name, "Trigger", binning_mass, binning_pt, binning_eta, scaleFactor=1.0/weightSum.GetValue())
             else:
                 d = d.Define("goodmuon","goodmuontrigger(goodgeneta,goodgenphi,Muon_pt,Muon_eta,Muon_phi,Muon_isGlobal,Muon_standalonePt,Muon_standaloneEta,Muon_standalonePhi,Muon_dxybs,Muon_mediumId,isTriggeredMuon)").Define("newweight","weight*goodmuon")
 
@@ -740,7 +740,7 @@ elif args.efficiency != 7:
 
         else:
             if not (args.genLevelEfficiency):
-                makeAndSaveHistograms(d, histo_name, "Isolation", binning_mass, binning_pt, binning_eta, scaleFactor=weightSum.GetValue())
+                makeAndSaveHistograms(d, histo_name, "Isolation", binning_mass, binning_pt, binning_eta, scaleFactor=1.0/weightSum.GetValue())
             else:
                 d = d.Define("goodmuon","goodmuonisolation(goodgeneta,goodgenphi,Muon_pt,Muon_eta,Muon_phi,Muon_isGlobal,Muon_standalonePt,Muon_standaloneEta,Muon_standalonePhi,Muon_dxybs,Muon_mediumId,isTriggeredMuon,Muon_pfRelIso04_all)").Define("newweight","weight*goodmuon")
 
@@ -774,7 +774,7 @@ elif args.efficiency != 7:
         d = d.Define("Probe_u_fail",        "BasicProbe_u[failCondition]")
         d = d.Define("Probe_charge_fail",   "BasicProbe_charge[failCondition]")
 
-        makeAndSaveHistograms(d, histo_name, "IsolationNoTrigger", binning_mass, binning_pt, binning_eta, scaleFactor=weightSum.GetValue())
+        makeAndSaveHistograms(d, histo_name, "IsolationNoTrigger", binning_mass, binning_pt, binning_eta, scaleFactor=1.0/weightSum.GetValue())
 
     ##For Isolation Failing Trigger
 
@@ -846,7 +846,7 @@ elif args.efficiency != 7:
 
         else:
             if not (args.genLevelEfficiency):
-                makeAndSaveHistograms(d, histo_name, "Isolation", binning_mass, binning_pt, binning_eta, scaleFactor=weightSum.GetValue())
+                makeAndSaveHistograms(d, histo_name, "Isolation", binning_mass, binning_pt, binning_eta, scaleFactor=1.0/weightSum.GetValue())
             else:
                 d = d.Define("goodmuon","goodmuonisolation(goodgeneta,goodgenphi,Muon_pt,Muon_eta,Muon_phi,Muon_isGlobal,Muon_standalonePt,Muon_standaloneEta,Muon_standalonePhi,Muon_dxybs,Muon_mediumId,isTriggeredMuon,Muon_pfRelIso04_all)").Define("newweight","weight*goodmuon")
 
@@ -937,7 +937,7 @@ else:
     d = d.Define("Probe_pt_fail",  "BasicProbe_pt[failCondition]")
     d = d.Define("Probe_eta_fail", "BasicProbe_eta[failCondition]")
     d = d.Define("TPmass_fail",    "BasicTPmass[failCondition]")
-    makeAndSaveHistograms(d, histo_name, "veto", binning_mass, binning_pt, binning_eta, scaleFactor=weightSum.GetValue())
+    makeAndSaveHistograms(d, histo_name, "veto", binning_mass, binning_pt, binning_eta, scaleFactor=1.0/weightSum.GetValue())
 
 weightSumHist = ROOT.TH1D("weightSum","Sum of the sign of the gen weights",1,-0.5,0.5)
 weightSumHist.SetBinContent(1, weightSum.GetValue())

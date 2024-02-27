@@ -42,8 +42,9 @@ workingPoints = { 1: "reco",
                   4: "trigger",
                   5: "iso",
                   6: "isonotrig",
-                  7: "veto"
-}
+                  7: "veto",
+                  8: "isofailtrig",
+                 }
 
     
 if __name__ == "__main__":    
@@ -108,7 +109,8 @@ if __name__ == "__main__":
         safeSystem(f"mkdir -p {outdir}", dryRun=False)
 
     inputdir_dict = {"data":"SingleMuon/",
-                     "mc":"DYJetsToMuMu_H2ErratumFix_TuneCP5_13TeV-powhegMiNNLO-pythia8-photos/",
+                     "mc": ["DYJetsToMuMu_H2ErratumFix_TuneCP5_13TeV-powhegMiNNLO-pythia8-photos/", "DYJetsToMuMu_H2ErratumFix_PDFExt_TuneCP5_13TeV-powhegMiNNLO-pythia8-photos"],
+                     "DYlowMass": ["DYJetsToMuMu_M-10to50_H2ErratumFix_TuneCP5_13TeV-powhegMiNNLO-pythia8-photos", "DYJetsToMuMu_M-10to50_H2ErratumFix_TuneCP5_13TeV-powhegMiNNLO-pythia8-photos_ext1"],
                      "Ztautau":"DYJetsToTauTau_M-50_AtLeastOneEorMuDecay_TuneCP5_13TeV-powhegMiNNLO-pythia8-photos/",
                      "TTSemileptonic":"TTTo2L2Nu_TuneCP5_13TeV-powheg-pythia8/",
                      "ZZ": "ZZTo2L2Nu_TuneCP5_13TeV_powheg_pythia8/",
@@ -152,10 +154,11 @@ if __name__ == "__main__":
 
     for xrun in toRun:
 
-        isdata = 1 if xrun == "data" else 0
-        isBkg = isBkg_dict[xrun]
         #inpath = indir + (inputdir_data if isdata else inputdir_mc)
-        inpath = indir + inputdir_dict[xrun]
+        if isinstance(inputdir_dict[xrun], list):
+            inpath = " ".join(["{i}{f}".format(i=indir,f=x) for x in inputdir_dict[xrun]])
+        else:
+            inpath = indir + inputdir_dict[xrun]
         for wp in workingPoints.keys():            
             if args.exclude and wp in args.exclude:
                 continue
@@ -175,7 +178,12 @@ if __name__ == "__main__":
                     else:
                         outfile = f"{outdir}tnp_{step}_{xrun}_{postfix}.root"                        
                     outfiles.append(outfile)
-                    cmd = f"python {executable} -i {inpath} -o {outfile} -d {isdata} -b {isBkg} -e {wp} -c {ch} -p {parity} -y {args.year} -iso {args.isoDefinition}"
+                    cmd = f"python {executable} -i {inpath} -o {outfile} -e {wp} -c {ch} -p {parity} -y {args.year} -iso {args.isoDefinition}"
+                    if xrun == "data":
+                        cmd += " --isData"
+                    elif isBkg_dict[xrun]:
+                        cmd += " -b"
+                        
                     cmd += commonOption
                     if args.noVertexPileupWeight:
                         cmd += " -nw"
@@ -185,6 +193,8 @@ if __name__ == "__main__":
                         cmd += " --noOppositeChargeTracking "
                     if args.SameCharge:
                         cmd += " --SameCharge"
+                    if xrun == "DYlowMass":
+                        cmd += "" # temporary patch to run on low mass DY with a normalization scaled by the cross section ratio with standard mass DY, so that histograms can be merged
                     print("")
                     eventParityText = "all" if parity == 0 else "odd" if parity < 0 else "even"
                     print(f"Running for {xrun} and {step} efficiency ({eventParityText} events)")

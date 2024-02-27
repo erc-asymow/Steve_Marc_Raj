@@ -107,7 +107,13 @@ if __name__ == "__main__":
         print(f"Creating folder {outdir}")
         safeSystem(f"mkdir -p {outdir}", dryRun=False)
 
-    inputdir_dict = {"data":"SingleMuon/", "mc":"DYJetsToMuMu_H2ErratumFix_TuneCP5_13TeV-powhegMiNNLO-pythia8-photos/", "Ztautau":"DYJetsToTauTau_M-50_AtLeastOneEorMuDecay_TuneCP5_13TeV-powhegMiNNLO-pythia8-photos/", "TTSemileptonic":"TTTo2L2Nu_TuneCP5_13TeV-powheg-pythia8/", "ZZ": "ZZTo2L2Nu_TuneCP5_13TeV_powheg_pythia8/", "WZ":"WZ_TuneCP5_13TeV-pythia8/", "WW": "WW_TuneCP5_13TeV-pythia8/"}
+    inputdir_dict = {"data":"SingleMuon/",
+                     "mc":"DYJetsToMuMu_H2ErratumFix_TuneCP5_13TeV-powhegMiNNLO-pythia8-photos/",
+                     "Ztautau":"DYJetsToTauTau_M-50_AtLeastOneEorMuDecay_TuneCP5_13TeV-powhegMiNNLO-pythia8-photos/",
+                     "TTSemileptonic":"TTTo2L2Nu_TuneCP5_13TeV-powheg-pythia8/",
+                     "ZZ": "ZZTo2L2Nu_TuneCP5_13TeV_powheg_pythia8/",
+                     "WZ":"WZ_TuneCP5_13TeV-pythia8/",
+                     "WW": "WW_TuneCP5_13TeV-pythia8/"}
     isBkg_dict = {"data": 0, "mc": 0, "Ztautau": 1, "TTSemileptonic": 1, "ZZ": 1, "WZ": 1, "WW": 1}
 
     #inputdir_data = "SingleMuon/"
@@ -136,9 +142,12 @@ if __name__ == "__main__":
 
     outfiles = [] # store names of output files so to merge them if needed
 
-    postfix = "vertexWeights{v}_oscharge{c}".format(v="0" if args.noVertexPileupWeight  else "1",
-                                                    c="0" if args.noOppositeCharge      else "1")
-
+    postfix = "vertexWeights{v}".format(v="0" if args.noVertexPileupWeight else "1")
+    if args.SameCharge:
+        postfix += "_sscharge"
+    else:
+        postfix += "_oscharge{c}".format(c="0" if args.noOppositeCharge else "1")
+    
     commonOption = f" --tagPt {args.tagPt} --tagIso {args.tagIso} --standaloneValidHits {args.standaloneValidHits}"
 
     for xrun in toRun:
@@ -160,11 +169,11 @@ if __name__ == "__main__":
                         step += "plus" if ch == 1 else "minus"
                     if parity:
                         step += "odd" if parity == -1 else "even"
-                    if wp == 2 and args.noOppositeChargeTracking:
+                    if wp == 2 and args.noOppositeChargeTracking and not args.SameCharge:
                         postfixTracking = postfix.replace("oscharge1", "oscharge0")
                         outfile = f"{outdir}tnp_{step}_{xrun}_{postfixTracking}.root"
                     else:
-                        outfile = f"{outdir}tnp_{step}_{xrun}_{postfix}.root"
+                        outfile = f"{outdir}tnp_{step}_{xrun}_{postfix}.root"                        
                     outfiles.append(outfile)
                     cmd = f"python {executable} -i {inpath} -o {outfile} -d {isdata} -b {isBkg} -e {wp} -c {ch} -p {parity} -y {args.year} -iso {args.isoDefinition}"
                     cmd += commonOption

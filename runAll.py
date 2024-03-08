@@ -46,7 +46,30 @@ workingPoints = { 1: "reco",
                   8: "isofailtrig",
                  }
 
-    
+def common_parser():
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-tpt","--tagPt", help="Minimum pt to select tag muons",
+                        type=float, default=25.)
+    parser.add_argument("-tiso","--tagIso", help="Isolation threshold to select tag muons",
+                        type=float, default=0.15)
+    parser.add_argument("--standaloneValidHits", help="Minimum number of valid hits for the standalone track (>= this value)",
+                        type=int, default=1)
+    parser.add_argument("-y", "--year", help="Choose year to run",
+                        type=str, default="2016", choices=["2016", "2017", "2018"])
+    parser.add_argument('-nw', '--noVertexPileupWeight', action='store_true',
+                        help='Do not use weights for vertex z position')
+    parser.add_argument("-nos", "--noOppositeCharge", action="store_true",
+                        help="Don't require opposite charges between tag and probe (including tracking, unless also using --noOppositeChargeTracking)")
+    parser.add_argument("--noOppositeChargeTracking", action="store_true",
+                        help="Don't require opposite charges between tag and probe for tracking")
+    parser.add_argument("-sc", "--SameCharge", action="store_true", help="Require the TP Pair to have same sign (for bkg study)",
+                        default=False)
+
+    parser.add_argument("-iso","--isoDefinition",help="Choose between the old and new isolation definition, 0 is old, 1 is new", default=1, type=int, choices = [0,1])
+    parser.add_argument("--normalizeMCsumGenWeights", action="store_true", help="Divide MC yields by sum of gen weigths (the sum is stored anyway so it can be done later offline)")
+    return parser
+        
 if __name__ == "__main__":    
 
     parser = argparse.ArgumentParser()
@@ -56,19 +79,11 @@ if __name__ == "__main__":
                         help='Output directory to store all root files')
     parser.add_argument('-d',  '--dryRun', action='store_true',
                         help='Do not execute commands, just print them')
-    parser.add_argument('-r',  '--run', default="all", type=str, choices=["data", "mc", "stand", "bkg", "Ztautau", "TTSemileptonic", "ZZ", "WZ", "WW", "all"],
+    parser.add_argument('-r',  '--run', default="all", type=str, choices=["data", "mc", "stand", "bkg", "DYlowMass", "Ztautau", "TTSemileptonic", "ZZ", "WZ", "WW", "all"],
                         help='Choose what to run, either data or MC, or both')
     # FIXME: unless I change histogram names inside the files I can't merge different working points, I could just merge data with MC but not worth
     #parser.add_argument('-m',  '--merge', action='store_true',
     #                    help='Merge root files in a new one')
-    parser.add_argument('-nw', '--noVertexPileupWeight', action='store_true',
-                        help='Do not use weights for vertex z position')
-    parser.add_argument("-nos", "--noOppositeCharge", action="store_true",
-                        help="Don't require opposite charges between tag and probe (including tracking, unless also using --noOppositeChargeTracking)")
-    parser.add_argument(        "--noOppositeChargeTracking", action="store_true",
-                                help="Don't require opposite charges between tag and probe for tracking")
-    parser.add_argument("-sc", "--SameCharge", action="store_true", help="Require the TP Pair to have same sign (for bkg study)",
-                        default=False)
     parser.add_argument('-s','--steps', default=None, nargs='*', type=int, choices=list(workingPoints.keys()),
                         help='Default runs all working points, but can choose only some if needed')
     parser.add_argument('-x','--exclude', default=None, nargs='*', type=int, choices=list(workingPoints.keys()),
@@ -79,20 +94,8 @@ if __name__ == "__main__":
                         help="Use tracker muons and a different executable")
     parser.add_argument("-p","--eventParity", help="Select events with given parity for statistical tests, -1/1 for odd/even events, 0 for all (default)",
                         type=int, nargs='+', default=[0], choices=[-1, 0, 1])
-    parser.add_argument("-tpt","--tagPt", help="Minimum pt to select tag muons",
-                        type=float, default=25.)
-    parser.add_argument("-tiso","--tagIso", help="Isolation threshold to select tag muons",
-                        type=float, default=0.15)
-    parser.add_argument(        "--standaloneValidHits", help="Minimum number of valid hits for the standalone track (>= this value)",
-                        type=int, default=1)
     #parser.add_argument('-exe', '--executable', default="Steve.py", type=str, choices=["Steve.py", "Steve_tracker.py"],
     #                    help='Choose script to run')
-
-    parser.add_argument("-y", "--year", help="Choose year to run",
-                        type=str, default="2016", choices=["2016", "2017", "2018"])
-    parser.add_argument("-iso","--isoDefinition",help="Choose between the old and new isolation definition, 0 is old, 1 is new", default=1, type=int, choices = [0,1])
-
-
     args = parser.parse_args()
 
     outdir = args.outdir
@@ -103,20 +106,20 @@ if __name__ == "__main__":
         indir += "/"
 
     executable = "Steve_tracker.py" if args.trackerMuons else "Steve.py"
-        
+
     if not os.path.exists(outdir):
         print(f"Creating folder {outdir}")
         safeSystem(f"mkdir -p {outdir}", dryRun=False)
 
     inputdir_dict = {"data":"SingleMuon/",
                      "mc": ["DYJetsToMuMu_H2ErratumFix_TuneCP5_13TeV-powhegMiNNLO-pythia8-photos/", "DYJetsToMuMu_H2ErratumFix_PDFExt_TuneCP5_13TeV-powhegMiNNLO-pythia8-photos"],
-                     "DYlowMass": ["DYJetsToMuMu_M-10to50_H2ErratumFix_TuneCP5_13TeV-powhegMiNNLO-pythia8-photos", "DYJetsToMuMu_M-10to50_H2ErratumFix_TuneCP5_13TeV-powhegMiNNLO-pythia8-photos_ext1"],
+                     "DYlowMass": ["DYJetsToMuMu_M-10to50_H2ErratumFix_TuneCP5_13TeV-powhegMiNNLO-pythia8-photos"], # "DYJetsToMuMu_M-10to50_H2ErratumFix_TuneCP5_13TeV-powhegMiNNLO-pythia8-photos_ext1"],
                      "Ztautau":"DYJetsToTauTau_M-50_AtLeastOneEorMuDecay_TuneCP5_13TeV-powhegMiNNLO-pythia8-photos/",
                      "TTSemileptonic":"TTTo2L2Nu_TuneCP5_13TeV-powheg-pythia8/",
                      "ZZ": "ZZTo2L2Nu_TuneCP5_13TeV_powheg_pythia8/",
                      "WZ":"WZ_TuneCP5_13TeV-pythia8/",
                      "WW": "WW_TuneCP5_13TeV-pythia8/"}
-    isBkg_dict = {"data": 0, "mc": 0, "Ztautau": 1, "TTSemileptonic": 1, "ZZ": 1, "WZ": 1, "WW": 1}
+    isBkg_dict = {"data": 0, "mc": 0, "Ztautau": 1, "TTSemileptonic": 1, "ZZ": 1, "WZ": 1, "WW": 1, "DYlowMass": 1}
 
     #inputdir_data = "SingleMuon/"
     #inputdir_mc   = "DYJetsToMuMu_H2ErratumFix_TuneCP5_13TeV-powhegMiNNLO-pythia8-photos/"
@@ -125,7 +128,7 @@ if __name__ == "__main__":
     #inputdir_ZZ = "ZZTo2L2Nu_TuneCP5_13TeV_powheg_pythia8/"
     #inputdir_WZ = "WZ_TuneCP5_13TeV-pythia8/"
     #inputdir_WW = "WW_TuneCP5_13TeV-pythia8/"   
-    
+
     toRun = []
     if args.run in ["all", "data","stand"]:
         toRun.append("data")
@@ -135,6 +138,8 @@ if __name__ == "__main__":
         toRun.append("Ztautau")
     if args.run in ["all", "bkg", "TTSemileptonic"]:
         toRun.append("TTSemileptonic")
+    if args.run in ["all", "bkg", "DYlowMass"]:
+        toRun.append("DYlowMass")
     if args.run in ["all", "bkg", "ZZ"]:
         toRun.append("ZZ")
     if args.run in ["all", "bkg", "WZ"]:
@@ -149,7 +154,7 @@ if __name__ == "__main__":
         postfix += "_sscharge"
     else:
         postfix += "_oscharge{c}".format(c="0" if args.noOppositeCharge else "1")
-    
+
     commonOption = f" --tagPt {args.tagPt} --tagIso {args.tagIso} --standaloneValidHits {args.standaloneValidHits}"
 
     for xrun in toRun:
@@ -183,6 +188,8 @@ if __name__ == "__main__":
                         cmd += " --isData"
                     elif isBkg_dict[xrun]:
                         cmd += " -b"
+                        if args.normalizeMCsumGenWeights:
+                            cmd += " --normalizeMCsumGenWeights"
                         
                     cmd += commonOption
                     if args.noVertexPileupWeight:

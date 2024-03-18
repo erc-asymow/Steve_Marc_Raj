@@ -272,7 +272,7 @@ else:
             d = d.Define("pu_weight", "_get_PileupWeight(Pileup_nTrueInt,2)")
             #d = d.Define("pu_weight", "puw_2016(Pileup_nTrueInt,2)") # 2 is for postVFP
  
-    d = d.Define("weight", "gen_weight*pu_weight*vertex_weight*{n}".format(n=args.normFactor))
+    d = d.Define("weight", "gen_weight*pu_weight*vertex_weight")
 
 ## For Tag Muons
 if args.year == "2016":
@@ -381,7 +381,8 @@ if(args.efficiency == 1):
         d = d.Define("Probe_pt_fail",  "Probe_pt[failCondition]")
         d = d.Define("Probe_eta_fail", "Probe_eta[failCondition]")
         d = d.Define("TPmass_fail", "TPmass[failCondition]")
-        scale = 1.0 if args.isData else (1.0/weightSum.GetValue()) if args.normalizeMCsumGenWeights else 1.0
+        normFactor = args.normFactor
+        scale = 1.0 if args.isData else (normFactor/weightSum.GetValue()) if args.normalizeMCsumGenWeights else normFactor
         makeAndSaveHistograms(d, histo_name, "Reco", binning_mass, binning_pt, binning_eta, scaleFactor=scale)
 
     else:
@@ -468,7 +469,8 @@ elif (args.efficiency == 2):
         d = d.Define("Probe_pt_fail",  "Probe_pt[failCondition]")
         d = d.Define("Probe_eta_fail", "Probe_eta[failCondition]")
         
-        scale = 1.0 if args.isData else (1.0/weightSum.GetValue()) if args.normalizeMCsumGenWeights else 1.0
+        normFactor = args.normFactor
+        scale = 1.0 if args.isData else (normFactor/weightSum.GetValue()) if args.normalizeMCsumGenWeights else normFactor
         makeAndSaveHistograms(d, histo_name, "Tracking", binning_mass, binning_pt, binning_eta, scaleFactor=scale)
 
         # save also the mass for passing probes computed with standalone variables
@@ -558,7 +560,8 @@ elif args.efficiency != 7:
             d = d.Define("Probe_pt_fail",  "BasicProbe_pt[failCondition]")
             d = d.Define("Probe_eta_fail", "BasicProbe_eta[failCondition]")
             d = d.Define("TPmass_fail",    "BasicTPmass[failCondition]")
-            scale = 1.0 if args.isData else (1.0/weightSum.GetValue()) if args.normalizeMCsumGenWeights else 1.0
+            normFactor = args.normFactor
+            scale = 1.0 if args.isData else (normFactor/weightSum.GetValue()) if args.normalizeMCsumGenWeights else normFactor
             makeAndSaveHistograms(d, histo_name, "IDIP", binning_mass, binning_pt, binning_eta, scaleFactor=scale)
         else:
             d = d.Define("goodmuon","goodmuonglobal(goodgeneta,goodgenphi,Muon_pt,Muon_eta,Muon_phi,Muon_isGlobal,Muon_standalonePt,Muon_standaloneEta,Muon_standalonePhi,Muon_dxybs,Muon_mediumId)")
@@ -644,7 +647,8 @@ elif args.efficiency != 7:
 
         else:
             if not (args.genLevelEfficiency):
-                scale = 1.0 if args.isData else (1.0/weightSum.GetValue()) if args.normalizeMCsumGenWeights else 1.0
+                normFactor = args.normFactor
+                scale = 1.0 if args.isData else (normFactor/weightSum.GetValue()) if args.normalizeMCsumGenWeights else normFactor
                 makeAndSaveHistograms(d, histo_name, "Trigger", binning_mass, binning_pt, binning_eta, scaleFactor=scale)
             else:
                 d = d.Define("goodmuon","goodmuontrigger(goodgeneta,goodgenphi,Muon_pt,Muon_eta,Muon_phi,Muon_isGlobal,Muon_standalonePt,Muon_standaloneEta,Muon_standalonePhi,Muon_dxybs,Muon_mediumId,isTriggeredMuon)").Define("newweight","weight*goodmuon")
@@ -728,7 +732,8 @@ elif args.efficiency != 7:
 
         else:
             if not (args.genLevelEfficiency):
-                scale = 1.0 if args.isData else (1.0/weightSum.GetValue()) if args.normalizeMCsumGenWeights else 1.0
+                normFactor = args.normFactor
+                scale = 1.0 if args.isData else (normFactor/weightSum.GetValue()) if args.normalizeMCsumGenWeights else normFactor
                 makeAndSaveHistograms(d, histo_name, "Isolation", binning_mass, binning_pt, binning_eta, scaleFactor=scale)
             else:
                 d = d.Define("goodmuon","goodmuonisolation(goodgeneta,goodgenphi,Muon_pt,Muon_eta,Muon_phi,Muon_isGlobal,Muon_standalonePt,Muon_standaloneEta,Muon_standalonePhi,Muon_dxybs,Muon_mediumId,isTriggeredMuon,Muon_pfRelIso04_all)").Define("newweight","weight*goodmuon")
@@ -763,7 +768,8 @@ elif args.efficiency != 7:
         d = d.Define("Probe_u_fail",        "BasicProbe_u[failCondition]")
         d = d.Define("Probe_charge_fail",   "BasicProbe_charge[failCondition]")
 
-        scale = 1.0 if args.isData else (1.0/weightSum.GetValue()) if args.normalizeMCsumGenWeights else 1.0
+        normFactor = args.normFactor
+        scale = 1.0 if args.isData else (normFactor/weightSum.GetValue()) if args.normalizeMCsumGenWeights else normFactor
         makeAndSaveHistograms(d, histo_name, "IsolationNoTrigger", binning_mass, binning_pt, binning_eta, scaleFactor=scale)
 
     ##For Isolation Failing Trigger
@@ -836,7 +842,8 @@ elif args.efficiency != 7:
 
         else:
             if not (args.genLevelEfficiency):
-                scale = 1.0 if args.isData else (1.0/weightSum.GetValue()) if args.normalizeMCsumGenWeights else 1.0
+                normFactor = args.normFactor
+                scale = 1.0 if args.isData else (normFactor/weightSum.GetValue()) if args.normalizeMCsumGenWeights else normFactor
                 makeAndSaveHistograms(d, histo_name, "Isolation", binning_mass, binning_pt, binning_eta, scaleFactor=scale)
             else:
                 d = d.Define("goodmuon","goodmuonisolation(goodgeneta,goodgenphi,Muon_pt,Muon_eta,Muon_phi,Muon_isGlobal,Muon_standalonePt,Muon_standaloneEta,Muon_standalonePhi,Muon_dxybs,Muon_mediumId,isTriggeredMuon,Muon_pfRelIso04_all)").Define("newweight","weight*goodmuon")
@@ -926,7 +933,8 @@ else:
     d = d.Define("Probe_pt_fail",  "BasicProbe_pt[failCondition]")
     d = d.Define("Probe_eta_fail", "BasicProbe_eta[failCondition]")
     d = d.Define("TPmass_fail",    "BasicTPmass[failCondition]")
-    scale = 1.0 if args.isData else (1.0/weightSum.GetValue()) if args.normalizeMCsumGenWeights else 1.0
+    normFactor = args.normFactor
+    scale = 1.0 if args.isData else (normFactor/weightSum.GetValue()) if args.normalizeMCsumGenWeights else normFactor
     makeAndSaveHistograms(d, histo_name, "veto", binning_mass, binning_pt, binning_eta, scaleFactor=scale)
 
 weightSumHist = ROOT.TH1D("weightSum","Sum of the sign of the gen weights",1,-0.5,0.5)

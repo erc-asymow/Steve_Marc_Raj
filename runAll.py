@@ -60,18 +60,59 @@ def common_parser():
     parser.add_argument('-nw', '--noVertexPileupWeight', action='store_true',
                         help='Do not use weights for vertex z position')
     parser.add_argument("-nos", "--noOppositeCharge", action="store_true",
-                        help="Don't require opposite charges between tag and probe (including tracking, unless also using --noOppositeChargeTracking)")
-    parser.add_argument("--noOppositeChargeTracking", action="store_true",
-                        help="Don't require opposite charges between tag and probe for tracking")
+                        help="Don't require opposite charges between tag and probe (tracking is an exception, unless also using --oppositeChargeTracking)")
+    parser.add_argument("--oppositeChargeTracking", dest="noOppositeChargeTracking", action="store_false",
+                        help="Require opposite charges between tag and probe for tracking (default case does not require it)")
     parser.add_argument("-sc", "--SameCharge", action="store_true", help="Require the TP Pair to have same sign (for bkg study)",
                         default=False)
 
     parser.add_argument("-iso","--isoDefinition",help="Choose between the old and new isolation definition, 0 is old, 1 is new", default=1, type=int, choices = [0,1])
-    parser.add_argument("--normalizeMCsumGenWeights", action="store_true", help="Divide MC yields by sum of gen weigths (the sum is stored anyway so it can be done later offline)")
+    parser.add_argument("--noNormalizeMCsumGenWeights", dest="normalizeMCsumGenWeights", action="store_false", help="Divide MC yields by sum of gen weigths (the sum is stored anyway so it can be done later offline)")
     return parser
         
 if __name__ == "__main__":    
 
+    lumiDict = {"2016" : 16.8, # only postVFP
+                "2017" : 37.99, # this includes the LS where the HLT_isoMu24 was not prescaled
+                "2018" : 59.81}
+
+    BR_TAUToMU = 0.1739
+    BR_TAUToE = 0.1782
+    xsec_ZmmPostVFP = 2001.9
+    xsec_WpmunuPostVFP = 11765.9
+    xsec_WmmunuPostVFP = 8703.87
+    xsec_ZmmMass10to50PostVFP = 6997.0
+    Z_TAU_TO_LEP_RATIO = (1.-(1. - BR_TAUToMU - BR_TAUToE)**2)
+
+    inputdir_dict = {"data": {"path" : "SingleMuon/",
+                              "isBkg": 0,
+                              "xsec" : 1.0} # dummy, just for consistency with other processes
+                     "mc": {"path" : ["DYJetsToMuMu_H2ErratumFix_TuneCP5_13TeV-powhegMiNNLO-pythia8-photos/", "DYJetsToMuMu_H2ErratumFix_PDFExt_TuneCP5_13TeV-powhegMiNNLO-pythia8-photos"],
+                            "isBkg" : 0,
+                            "xsec" : xsec_ZmmPostVFP}
+                     "DYlowMass": {"path" : ["DYJetsToMuMu_M-10to50_H2ErratumFix_TuneCP5_13TeV-powhegMiNNLO-pythia8-photos"], # "DYJetsToMuMu_M-10to50_H2ErratumFix_TuneCP5_13TeV-powhegMiNNLO-pythia8-photos_ext1"],
+                                   "isBkg" : 1,
+                                   "xsec" : xsec_ZmmMass10to50PostVFP}
+                     "Ztautau": { "path" : "DYJetsToTauTau_M-50_AtLeastOneEorMuDecay_TuneCP5_13TeV-powhegMiNNLO-pythia8-photos/",
+                                   "isBkg" : 1,
+                                   "xsec" : xsec_ZmmPostVFP*Z_TAU_TO_LEP_RATIO}
+                     "TTSemileptonic": {"path" : "TTTo2L2Nu_TuneCP5_13TeV-powheg-pythia8/",
+                                        "isBkg" : 1,
+                                        "xsec" : 88.29}
+                     "ZZ": {"path" : "ZZTo2L2Nu_TuneCP5_13TeV_powheg_pythia8/",
+                            "isBkg" : 1,
+                            "xsec" : 0.60}
+                     "WZ": {"path" : "WZ_TuneCP5_13TeV-pythia8/",
+                            "isBkg" : 1,
+                            "xsec" : 47.03} # this value might be incorrect
+                     "WW": {"path" : "WW_TuneCP5_13TeV-pythia8/"
+                            "isBkg" : 1,
+                            "xsec" : 118.7} # this value might be incorrect
+                    }
+
+    allValidProcs = list(inputdir_dict.keys())
+    allValidProcs.extend(["all", "bkg", "stand"]) # this can be removed once we run automatically on everything
+    
     parser = argparse.ArgumentParser()
     parser.add_argument('-i','--indir',  default=None, type=str, required=True,
                         help='Input directory with the root files inside (common path for data and MC)')
@@ -79,7 +120,7 @@ if __name__ == "__main__":
                         help='Output directory to store all root files')
     parser.add_argument('-d',  '--dryRun', action='store_true',
                         help='Do not execute commands, just print them')
-    parser.add_argument('-r',  '--run', default="all", type=str, choices=["data", "mc", "stand", "bkg", "DYlowMass", "Ztautau", "TTSemileptonic", "ZZ", "WZ", "WW", "all"],
+    parser.add_argument('-r',  '--run', default="all", type=str, choices=allValidProcs,
                         help='Choose what to run, either data or MC, or both')
     # FIXME: unless I change histogram names inside the files I can't merge different working points, I could just merge data with MC but not worth
     #parser.add_argument('-m',  '--merge', action='store_true',
@@ -111,41 +152,10 @@ if __name__ == "__main__":
         print(f"Creating folder {outdir}")
         safeSystem(f"mkdir -p {outdir}", dryRun=False)
 
-    inputdir_dict = {"data":"SingleMuon/",
-                     "mc": ["DYJetsToMuMu_H2ErratumFix_TuneCP5_13TeV-powhegMiNNLO-pythia8-photos/", "DYJetsToMuMu_H2ErratumFix_PDFExt_TuneCP5_13TeV-powhegMiNNLO-pythia8-photos"],
-                     "DYlowMass": ["DYJetsToMuMu_M-10to50_H2ErratumFix_TuneCP5_13TeV-powhegMiNNLO-pythia8-photos"], # "DYJetsToMuMu_M-10to50_H2ErratumFix_TuneCP5_13TeV-powhegMiNNLO-pythia8-photos_ext1"],
-                     "Ztautau":"DYJetsToTauTau_M-50_AtLeastOneEorMuDecay_TuneCP5_13TeV-powhegMiNNLO-pythia8-photos/",
-                     "TTSemileptonic":"TTTo2L2Nu_TuneCP5_13TeV-powheg-pythia8/",
-                     "ZZ": "ZZTo2L2Nu_TuneCP5_13TeV_powheg_pythia8/",
-                     "WZ":"WZ_TuneCP5_13TeV-pythia8/",
-                     "WW": "WW_TuneCP5_13TeV-pythia8/"}
-    isBkg_dict = {"data": 0, "mc": 0, "Ztautau": 1, "TTSemileptonic": 1, "ZZ": 1, "WZ": 1, "WW": 1, "DYlowMass": 1}
-
-    #inputdir_data = "SingleMuon/"
-    #inputdir_mc   = "DYJetsToMuMu_H2ErratumFix_TuneCP5_13TeV-powhegMiNNLO-pythia8-photos/"
-    #inputdir_Ztautau = "DYJetsToTauTau_M-50_AtLeastOneEorMuDecay_TuneCP5_13TeV-powhegMiNNLO-pythia8-photos/"
-    #inputdir_TTSemileptonic = "TTTo2L2Nu_TuneCP5_13TeV-powheg-pythia8/"
-    #inputdir_ZZ = "ZZTo2L2Nu_TuneCP5_13TeV_powheg_pythia8/"
-    #inputdir_WZ = "WZ_TuneCP5_13TeV-pythia8/"
-    #inputdir_WW = "WW_TuneCP5_13TeV-pythia8/"   
-
     toRun = []
-    if args.run in ["all", "data","stand"]:
-        toRun.append("data")
-    if args.run in ["all", "mc", "stand"]:
-        toRun.append("mc")
-    if args.run in ["all", "bkg", "Ztautau"]:
-        toRun.append("Ztautau")
-    if args.run in ["all", "bkg", "TTSemileptonic"]:
-        toRun.append("TTSemileptonic")
-    if args.run in ["all", "bkg", "DYlowMass"]:
-        toRun.append("DYlowMass")
-    if args.run in ["all", "bkg", "ZZ"]:
-        toRun.append("ZZ")
-    if args.run in ["all", "bkg", "WZ"]:
-        toRun.append("WZ")
-    if args.run in ["all", "bkg", "WW"]:
-        toRun.append("WW")
+    for p in allValidProcs:
+        if args.run == "all" or args.run == p or (args.run == "bgk" and inputdir_dict[p]["isBkg"]) or (args.run == "stand" and p in ["data", "mc"]):
+            toRun.append(p)
 
     outfiles = [] # store names of output files so to merge them if needed
 
@@ -159,11 +169,12 @@ if __name__ == "__main__":
 
     for xrun in toRun:
 
+        process = inputdir_dict[xrun]
         #inpath = indir + (inputdir_data if isdata else inputdir_mc)
-        if isinstance(inputdir_dict[xrun], list):
-            inpath = " ".join(["{i}{f}".format(i=indir,f=x) for x in inputdir_dict[xrun]])
+        if isinstance(process["path"], list):
+            inpath = " ".join(["{i}{f}".format(i=indir,f=x) for x in process["path"]])
         else:
-            inpath = indir + inputdir_dict[xrun]
+            inpath = indir + process["path"]
         for wp in workingPoints.keys():            
             if args.exclude and wp in args.exclude:
                 continue
@@ -186,11 +197,13 @@ if __name__ == "__main__":
                     cmd = f"python {executable} -i {inpath} -o {outfile} -e {wp} -c {ch} -p {parity} -y {args.year} -iso {args.isoDefinition}"
                     if xrun == "data":
                         cmd += " --isData"
-                    elif isBkg_dict[xrun]:
-                        cmd += " -b"
-                        if args.normalizeMCsumGenWeights:
-                            cmd += " --normalizeMCsumGenWeights"
-                        
+                    else:
+                        norm = lumiDict[args.year] * process["xsec"]
+                        cmd += f" --normFactor {norm}"
+                        if process["isBkg"]:
+                            cmd += " -b"
+                        if not args.normalizeMCsumGenWeights:
+                            cmd += " --noNormalizeMCsumGenWeights"
                     cmd += commonOption
                     if args.noVertexPileupWeight:
                         cmd += " -nw"
@@ -200,8 +213,6 @@ if __name__ == "__main__":
                         cmd += " --noOppositeChargeTracking "
                     if args.SameCharge:
                         cmd += " --SameCharge"
-                    if xrun == "DYlowMass":
-                        cmd += "" # temporary patch to run on low mass DY with a normalization scaled by the cross section ratio with standard mass DY, so that histograms can be merged
                     print("")
                     eventParityText = "all" if parity == 0 else "odd" if parity < 0 else "even"
                     print(f"Running for {xrun} and {step} efficiency ({eventParityText} events)")

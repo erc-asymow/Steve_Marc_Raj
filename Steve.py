@@ -69,7 +69,7 @@ def make_jsonhelper(filename):
 parser = argparse.ArgumentParser()
 
 parser.add_argument("-e","--efficiency",
-		    help="1 for reco, 2 for \"tracking\", 3 for idip, 4 for trigger, 5 for isolation, 6 for isolation without trigger, 7 for veto, 8 for isolation with failing trigger, 9 for new veto",
+		    help="1 for reco, 2 for \"tracking\", 3 for idip, 4 for trigger, 5 for isolation, 6 for isolation without trigger, 7 for isolation with failing trigger, 8 for veto (loose ID+dxybs<0.05), 9 for old veto (not used in the analysis)",
                     type=int, choices=range(1,10))
 
 #parser.add_argument("-i","--input_path", help="path of the input root files", type=str)
@@ -520,7 +520,7 @@ elif (args.efficiency == 2):
         pass_histogram_norm.Write()
 
 ## Muons for all other efficiency step except veto
-elif args.efficiency != 7:
+elif args.efficiency != 9:
     if(args.isData != 1):
         d = d.Define("GenMatchedIdx","GenMatchedIdx(GenMuonBare_eta, GenMuonBare_phi, Muon_eta, Muon_phi)")
 
@@ -793,7 +793,7 @@ elif args.efficiency != 7:
 
     ##For Isolation Failing Trigger
 
-    if(args.efficiency == 8):
+    if(args.efficiency == 7):
 
         # define condition for passing probes
         d = d.Define("passCondition_IDIPTrigIso", "passCondition_IDIP && !passCondition_Trig &&  passCondition_Iso")
@@ -874,8 +874,8 @@ elif args.efficiency != 7:
                 pass_histogram_reco.Write()
                 pass_histogram_norm.Write()
 
-    # For new veto
-    if (args.efficiency == 9):
+    # For veto (loose ID+dxybs<0.05)
+    if (args.efficiency == 8):
         if not (args.genLevelEfficiency):
             # define condition for passing probes
             d = d.Define("passCondition", "getVariables(TPPairs, passCondition_newVeto, 2)")

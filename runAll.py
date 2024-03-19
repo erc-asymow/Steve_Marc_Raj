@@ -5,7 +5,7 @@
 # all working points with default options
 # python runAll.py -i /scratch/shared/NanoAOD/Tnp_NanoV9/TNP/ -o testAll
 #
-# only mc, and only steps 1, 4, 6
+# only signal mc, and only steps 1, 4, 6
 # python runAll.py -i /scratch/shared/NanoAOD/Tnp_NanoV9/TNP/ -o testAll -r mc -s 1 4 6
 #
 # could use -m to merge all output files into a single one, but would also need to change histogram names
@@ -14,7 +14,7 @@
 # use -d to test the command, without running them automatically
 #
 # typical default command for all steps
-# python runAll.py -i input -o output --noOppositeChargeTracking
+# python runAll.py -i input -o output
 
 import os, re, copy, math, array
 
@@ -42,8 +42,8 @@ workingPoints = { 1: "reco",
                   4: "trigger",
                   5: "iso",
                   6: "isonotrig",
-                  7: "veto",
-                  8: "isofailtrig",
+                  7: "isofailtrig",
+                  8: "veto",
                  }
 
 def common_parser():

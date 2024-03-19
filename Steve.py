@@ -23,32 +23,16 @@ def makeAndSaveOneHist(d, histo_name, histo_title, binning_mass, binning_pt, bin
                                len(binning_mass)-1, binning_mass,
                                len(binning_pt)-1, binning_pt,
                                len(binning_eta)-1, binning_eta)
-    
+
     histogram = d.Histo3D(model, f"{massVar}_{passStr}", f"Probe_pt_{passStr}", f"Probe_eta_{passStr}", "weight")
     histogram.Scale(scaleFactor)
     histogram.Write()
-    
-    
+
+
 def makeAndSaveHistograms(d, histo_name, histo_title, binning_mass, binning_pt, binning_eta, massVar="TPmass", scaleFactor=1.0):
 
-    # model_pass = ROOT.RDF.TH3DModel(f"pass_mu_{histo_name}", f"{histo_title} pass",
-    #                                 len(binning_mass)-1, binning_mass,
-    #                                 len(binning_pt)-1, binning_pt,
-    #                                 len(binning_eta)-1, binning_eta)
-    # model_fail = ROOT.RDF.TH3DModel(f"fail_mu_{histo_name}", f"{histo_title} fail",
-    #                                 len(binning_mass)-1, binning_mass,
-    #                                 len(binning_pt)-1, binning_pt,
-    #                                 len(binning_eta)-1, binning_eta)
-    
-    # pass_histogram = d.Histo3D(model_pass, f"{massVar}_pass", "Probe_pt_pass", "Probe_eta_pass", "weight")
-    # fail_histogram = d.Histo3D(model_fail, f"{massVar}_fail", "Probe_pt_fail", "Probe_eta_fail", "weight")
-    
-    # pass_histogram.Write()
-    # fail_histogram.Write()
-
     makeAndSaveOneHist(d, histo_name, histo_title, binning_mass, binning_pt, binning_eta, massVar, isPass=True, scaleFactor=scaleFactor)
-    makeAndSaveOneHist(d, histo_name, histo_title, binning_mass, binning_pt, binning_eta, massVar, isPass=False, scaleFactor=scaleFactor)
-    
+    makeAndSaveOneHist(d, histo_name, histo_title, binning_mass, binning_pt, binning_eta, massVar, isPass=False, scaleFactor=scaleFactor)    
 
 
 def make_jsonhelper(filename):
@@ -73,11 +57,11 @@ def make_jsonhelper(filename):
 parser = common_parser()
 
 parser.add_argument("-e","--efficiency",
-		    help="1 for reco, 2 for \"tracking\", 3 for idip, 4 for trigger, 5 for isolation, 6 for isolation without trigger, 7 for veto, 8 for isolation with failing trigger",
-                    type=int, choices=range(1,9))
-parser.add_argument("--vetoStrategy",
+		    help="1 for reco, 2 for \"tracking\", 3 for idip, 4 for trigger, 5 for isolation, 6 for isolation without trigger, 7 for isolation with failing trigger, 8 for veto (loose ID+dxybs<0.05), 9 for test veto (not used in the analysis)",
+                    type=int, choices=range(1,10))
+parser.add_argument("--testVetoStrategy",
                     default=0,
-		    help="Different definition for veto efficiency (check code for details)",
+		    help="Different definition for test veto efficiency measurement (check code for details)",
                     type=int, choices=range(3))
 
 #parser.add_argument("-i","--input_path", help="path of the input root files", type=str)
@@ -154,8 +138,8 @@ for name in files: filenames.push_back(name)
 d = ROOT.RDataFrame("Events",filenames )
 
 # had to hack, since definition of the vertex variables were not consistent throughout 
-#various productions. Made alias of the new variables since the part where actual calculation 
-#is done remains same
+# various productions. Made alias of the new variables since the part where actual calculation 
+# is done remains same
 d = d.Alias("Muon_Z", "Muon_vz")
 d = d.Alias("Muon_X", "Muon_vx")
 d = d.Alias("Muon_Y", "Muon_vy")
@@ -165,7 +149,7 @@ d = d.Alias("Track_Y", "Track_vy")
 
 masshighut = 200
 
-binning_pt = array('d',[24., 26., 28., 30., 32., 34., 36., 38., 40., 42., 44., 47., 50., 55., 60., 65.])
+binning_pt = array('d',[15.,20.,24., 26., 28., 30., 32., 34., 36., 38., 40., 42., 44., 47., 50., 55., 60., 65.])
 binning_eta = array('d',[round(-2.4 + i*0.1,2) for i in range(49)])
 binning_mass = array('d',[60 + i for i in range(masshighut-60+1)])
 binning_charge = array('d',[-1.5,0,1.5])
@@ -344,7 +328,7 @@ if(args.efficiency == 1):
         # define all probes
         d = d.Define("Probe_Tracks", f"Track_pt > 24 && abs(Track_eta) < 2.4 && Track_trackOriginalAlgo != 13 && Track_trackOriginalAlgo != 14 && isGenMatchedTrack && (Track_qualityMask & 4) {chargeCut}")
         # condition for passing probes
-        # FIXME: add other criteria to the MergedStandAloneMuon to accept the matching? E.g. |eta| < 2.4 or pt > XX? No, it is an acceptance on numerator which we don't want
+        # FIXME: add other criteria to the MergedStandAloneMuon to accept the matching? E.g. |eta| < 2.4? No, it is an acceptance on numerator which we don't want
         d = d.Define("goodStandaloneMuon", f"MergedStandAloneMuon_pt > 15 && MergedStandAloneMuon_numberOfValidHits >= {minStandaloneNumberOfValidHits}")
         d = d.Define("passCondition_reco", "trackStandaloneDR(Track_eta, Track_phi, MergedStandAloneMuon_eta[goodStandaloneMuon], MergedStandAloneMuon_phi[goodStandaloneMuon]) < 0.3")
         
@@ -355,7 +339,7 @@ if(args.efficiency == 1):
         # overriding previous pt binning
         #binning_pt = array('d',[24., 65.])
         #binning_pt = array('d',[24., 26., 30., 34., 38., 42., 46., 50., 55., 65.])
-        binning_pt = array('d',[24., 26., 30., 34., 38., 42., 46., 50., 55., 60., 65.])
+        binning_pt = array('d',[15., 20., 24., 26., 30., 34., 38., 42., 46., 50., 55., 60., 65.]) #modified to be used also for veto
         ## binning is currently 50,130 GeV, but it is overridden below 
         # also for mass
         massLow  =  60
@@ -449,7 +433,7 @@ elif (args.efficiency == 2):
         #binning_pt = array('d',[15., 30., 45., 60., 80.])
         #binning_pt = array('d',[15., 25., 35., 45., 55., 65., 80.])
         #binning_pt = array('d',[24., 65.])
-        binning_pt = array('d',[24., 35., 45., 55., 65.])
+        binning_pt = array('d',[15., 24., 35., 45., 55., 65.]) #modified to be used also for veto
         #binning_pt = array('d',[(15.0 + i*1.0) for i in range(66) ])
         
         # Here we are using the muon variables to calulate the mass for the passing probes for tracking efficiency
@@ -494,8 +478,8 @@ elif (args.efficiency == 2):
         pass_histogram_norm.Write()
 
 ## Muons for all other efficiency step except veto
-elif args.efficiency != 7:
-    if(not args.isData):
+elif args.efficiency != 9:
+    if(args.isData != 1):
         d = d.Define("GenMatchedIdx","GenMatchedIdx(GenMuonBare_eta, GenMuonBare_phi, Muon_eta, Muon_phi)")
 
     chargeCut = ""
@@ -536,6 +520,7 @@ elif args.efficiency != 7:
     ## IMPORTANT: define only the specific condition to be passed, not with the && of previous steps (although in principle it is the same as long as that one is already applied)
     ##            also, these are based on the initial Muon collection, with no precooked filtering
     d = d.Define("passCondition_IDIP", "Muon_mediumId && abs(Muon_dxybs) < 0.05")
+    d = d.Define("passCondition_newVeto", "Muon_looseId && abs(Muon_dxybs) < 0.05")
     d = d.Define("passCondition_Trig", "isTriggeredMuon")
     #d = d.Define("passCondition_Iso",  "Muon_pfRelIso04_all < 0.15") #FOR NOW OLD ISO DEFINITION. OTHER COMMENTED LINES HAVE NEW DEFITION (BOTH CHARGED AND INCLUSIVE)
     if(args.isoDefinition == 1):
@@ -774,7 +759,7 @@ elif args.efficiency != 7:
 
     ##For Isolation Failing Trigger
 
-    if(args.efficiency == 8):
+    if(args.efficiency == 7):
 
         # define condition for passing probes
         d = d.Define("passCondition_IDIPTrigIso", "passCondition_IDIP && !passCondition_Trig &&  passCondition_Iso")
@@ -856,6 +841,34 @@ elif args.efficiency != 7:
 
                 pass_histogram_reco.Write()
                 pass_histogram_norm.Write()
+
+    # For veto (loose ID+dxybs<0.05)
+    if (args.efficiency == 8):
+        if not (args.genLevelEfficiency):
+            # define condition for passing probes
+            d = d.Define("passCondition", "getVariables(TPPairs, passCondition_newVeto, 2)")
+            d = d.Define("failCondition", "!passCondition")            
+            # pass probes
+            d = d.Define("Probe_pt_pass",  "BasicProbe_pt[passCondition]")
+            d = d.Define("Probe_eta_pass", "BasicProbe_eta[passCondition]")
+            d = d.Define("TPmass_pass",    "BasicTPmass[passCondition]")
+            # fail probes
+            d = d.Define("Probe_pt_fail",  "BasicProbe_pt[failCondition]")
+            d = d.Define("Probe_eta_fail", "BasicProbe_eta[failCondition]")
+            d = d.Define("TPmass_fail",    "BasicTPmass[failCondition]")
+            makeAndSaveHistograms(d, histo_name, "newVeto", binning_mass, binning_pt, binning_eta)
+        else:
+            d = d.Define("goodmuon","goodmuonglobal(goodgeneta,goodgenphi,Muon_pt,Muon_eta,Muon_phi,Muon_isGlobal,Muon_standalonePt,Muon_standaloneEta,Muon_standalonePhi,Muon_dxybs,Muon_mediumId)")
+            d = d.Define("newweight","weight*goodmuon")
+
+            model_pass_reco = ROOT.RDF.TH2DModel("Pass","",len(binning_eta)-1,binning_eta,len(binning_pt)-1,binning_pt)
+            model_norm_reco = ROOT.RDF.TH2DModel("Norm","",len(binning_eta)-1,binning_eta,len(binning_pt)-1,binning_pt)
+
+            pass_histogram_reco = d.Histo2D(model_pass_reco,"goodgeneta","goodgenpt","newweight")
+            pass_histogram_norm = d.Histo2D(model_norm_reco,"goodgeneta","goodgenpt","weight")
+
+            pass_histogram_reco.Write()
+            pass_histogram_norm.Write()
 
 else:
     # for the veto selection

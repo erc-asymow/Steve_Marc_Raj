@@ -12,6 +12,7 @@ import time
 import sys
 
 from runAll import common_parser
+from dataset_tools import makeFilelist
 
 import argparse
 
@@ -118,11 +119,13 @@ else:
 
 files=[]
 
-for i in range(len(args.input_path)):
-    for root, dirnames, filenames in os.walk(args.input_path[i]):
-        for filename in filenames:
-            if filename.endswith('.root'):
-                files.append(os.path.join(root, filename))
+files = makeFilelist(args.input_path)
+
+# for i in range(len(args.input_path)):
+#     for root, dirnames, filenames in os.walk(args.input_path[i]):
+#         for filename in filenames:
+#             if filename.endswith('.root'):
+#                 files.append(os.path.join(root, filename))
 
 if args.charge and args.efficiency in [2]:
     print("")

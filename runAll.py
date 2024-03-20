@@ -44,6 +44,9 @@ workingPoints = { 1: "reco",
                   6: "isonotrig",
                   7: "isofailtrig",
                   8: "veto",
+                  9: "tracking_trackSeededTrack",
+                  10: "reco_trackerMuon",
+                  11: "veto_trackerOrGlobalMuon",
                  }
 
 def common_parser():
@@ -86,41 +89,42 @@ if __name__ == "__main__":
 
     inputdir_dict = {"data": {"path" : "SingleMuon/",
                               "isBkg": 0,
-                              "xsec" : 1.0} # dummy, just for consistency with other processes
+                              "xsec" : 1.0}, # dummy, just for consistency with other processes
                      "mc": {"path" : ["DYJetsToMuMu_H2ErratumFix_TuneCP5_13TeV-powhegMiNNLO-pythia8-photos/", "DYJetsToMuMu_H2ErratumFix_PDFExt_TuneCP5_13TeV-powhegMiNNLO-pythia8-photos"],
                             "isBkg" : 0,
-                            "xsec" : xsec_ZmmPostVFP}
+                            "xsec" : xsec_ZmmPostVFP},
                      "DYlowMass": {"path" : ["DYJetsToMuMu_M-10to50_H2ErratumFix_TuneCP5_13TeV-powhegMiNNLO-pythia8-photos"], # "DYJetsToMuMu_M-10to50_H2ErratumFix_TuneCP5_13TeV-powhegMiNNLO-pythia8-photos_ext1"],
                                    "isBkg" : 1,
-                                   "xsec" : xsec_ZmmMass10to50PostVFP}
+                                   "xsec" : xsec_ZmmMass10to50PostVFP},
                      "Ztautau": { "path" : "DYJetsToTauTau_M-50_AtLeastOneEorMuDecay_TuneCP5_13TeV-powhegMiNNLO-pythia8-photos/",
                                    "isBkg" : 1,
-                                   "xsec" : xsec_ZmmPostVFP*Z_TAU_TO_LEP_RATIO}
+                                   "xsec" : xsec_ZmmPostVFP*Z_TAU_TO_LEP_RATIO},
                      "TTSemileptonic": {"path" : "TTTo2L2Nu_TuneCP5_13TeV-powheg-pythia8/",
                                         "isBkg" : 1,
-                                        "xsec" : 88.29}
+                                        "xsec" : 88.29},
                      "ZZ": {"path" : "ZZTo2L2Nu_TuneCP5_13TeV_powheg_pythia8/",
                             "isBkg" : 1,
-                            "xsec" : 0.60}
+                            "xsec" : 0.60},
                      "WZ": {"path" : "WZ_TuneCP5_13TeV-pythia8/",
                             "isBkg" : 1,
-                            "xsec" : 47.03} # this value might be incorrect
-                     "WW": {"path" : "WW_TuneCP5_13TeV-pythia8/"
+                            "xsec" : 47.03}, # this value might be incorrect
+                     "WW": {"path" : "WW_TuneCP5_13TeV-pythia8/",
                             "isBkg" : 1,
-                            "xsec" : 118.7} # this value might be incorrect
+                            "xsec" : 118.7}, # this value might be incorrect
                     }
 
     allValidProcs = list(inputdir_dict.keys())
-    allValidProcs.extend(["all", "bkg", "stand"]) # this can be removed once we run automatically on everything
+    allValidProcsAndSpecial = list(allValidProcs)
+    allValidProcsAndSpecial.extend(["all", "bkg", "stand"]) # this can be removed once we run automatically on everything
     
-    parser = argparse.ArgumentParser()
+    parser = common_parser()
     parser.add_argument('-i','--indir',  default=None, type=str, required=True,
                         help='Input directory with the root files inside (common path for data and MC)')
     parser.add_argument('-o','--outdir', default=None, type=str, required=True,
                         help='Output directory to store all root files')
     parser.add_argument('-d',  '--dryRun', action='store_true',
                         help='Do not execute commands, just print them')
-    parser.add_argument('-r',  '--run', default="all", type=str, choices=allValidProcs,
+    parser.add_argument('-r',  '--run', default="all", type=str, choices=allValidProcsAndSpecial,
                         help='Choose what to run, either data or MC, or both')
     # FIXME: unless I change histogram names inside the files I can't merge different working points, I could just merge data with MC but not worth
     #parser.add_argument('-m',  '--merge', action='store_true',

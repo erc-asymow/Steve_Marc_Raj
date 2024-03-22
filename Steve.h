@@ -35,7 +35,7 @@ void initializeVertexPileupWeights(const std::string& _filename_vertexPileupWeig
     std::cerr << "WARNING: Failed to open prefiring file " << _filename_vertexPileupWeights << "\n";
     exit(EXIT_FAILURE);
   }
-  std::cout << "INFO >>> Initializing histograms for vertex-pileup weights from file " << _filename_vertexPileupWeights << std::endl;
+  std::cout << "INFO --> Initializing histograms for vertex-pileup weights from file " << _filename_vertexPileupWeights << std::endl;
   if (year=="2016"){
     std::vector<std::string> eras = {"BtoF", "GtoH"};
     int id = 1;

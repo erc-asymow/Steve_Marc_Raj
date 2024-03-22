@@ -59,7 +59,7 @@ parser = common_parser()
 
 parser.add_argument("-e","--efficiency",
 		    help="1 for reco, 2 for 'tracking', 3 for idip, 4 for trigger, 5 for isolation, 6 for isolation without trigger, 7 for isolation with failing trigger, 8 for veto (loose ID+dxybs<0.05), 9 for P(tracker-seeded track | Standalone muon), 10 for p(tracker muon | tracker-seeded track and not global), 11 for veto on top of 'global or tracker' ",
-                    type=int, choices=range(1,10))
+                    type=int, choices=range(1,12))
 parser.add_argument("--testVetoStrategy",
                     default=0,
 		    help="Different definition for test veto efficiency measurement (check code for details)",
@@ -119,7 +119,9 @@ else:
 
 files=[]
 
-files = makeFilelist(args.input_path)
+# print(args.input_path)
+files = makeFilelist(args.input_path, maxFiles=args.maxFiles)
+# print(files)
 
 # for i in range(len(args.input_path)):
 #     for root, dirnames, filenames in os.walk(args.input_path[i]):
@@ -133,7 +135,6 @@ if args.charge and args.efficiency in [2]:
     print("")
 
 
-#print(files)
 filenames = ROOT.std.vector('string')()
 
 for name in files: filenames.push_back(name)
@@ -915,13 +916,6 @@ elif args.efficiency == 9:
 
     d = d.Define("passCondition", "getVariables(TPPairs, passCondition_tracking, 2)")
     d = d.Define("failCondition", "!passCondition")
-        
-    d = d.Define("Probe_pt_pass",  "Probe_pt[passCondition]")
-    d = d.Define("Probe_eta_pass", "Probe_eta[passCondition]")
-    d = d.Define("TPmass_pass", "TPmass[passCondition]")
-    d = d.Define("Probe_pt_fail",  "Probe_pt[failCondition]")
-    d = d.Define("Probe_eta_fail", "Probe_eta[failCondition]")
-    d = d.Define("TPmass_fail", "TPmass[failCondition]")
 
     # Here we are using the muon variables to calulate the mass for the passing probes for reco efficiency
     ## However the TPPairs were made using indices from MergedStandAloneMuon_XX collections, which are not necessarily valid for Muon_XX

@@ -1,3 +1,4 @@
+import subprocess
 import sys
 import os
 import glob
@@ -11,7 +12,7 @@ def is_zombie(file_path):
     # Try opening the ROOT file and check if it's a zombie file
     f = ROOT.TFile.Open(file_path)
     if not f or f.IsZombie():
-        print("WARNING! Found zombie file: {fp}".format(fp=file_path))
+        print(f"WARNING! Found zombie file: {file_path}")
         return True
     f.Close()
     return False
@@ -28,9 +29,10 @@ def buildFileListPosix(path):
 def appendFilesXrd(filelist, xrdfs, path, suffixes = [".root"], recurse = False, num_clients = 16):
     status, dirlist = xrdfs.dirlist(path, flags = XRootD.client.flags.DirListFlags.STAT)
 
+    #print("--> dirlist = ", dirlist)
     if not status.ok:
         if status.code == 400 and status.errno == 3011:
-            print("WARNING! XRootD directory not found: {p}".format(p=path))
+            print(f"WARNING! XRootD directory not found: {path}")
         else:
             raise RuntimeError(f"Error in XRootD.client.FileSystem.dirlist: {status.message}, {status.code}, {status.errno}")
         return
@@ -83,7 +85,7 @@ def buildFileList(path):
     return buildFileListXrd(path) if path.startswith(xrdprefix) else buildFileListPosix(path)
 
 
-def makeFilelist(paths, checkFileForZombie=False):
+def makeFilelist(paths, checkFileForZombie=False, maxFiles=0):
     filelist = []
     expandedPaths = []
     for path in paths:
@@ -95,6 +97,14 @@ def makeFilelist(paths, checkFileForZombie=False):
     if checkFileForZombie:
         filelist = [p for p in paths if not is_zombie(p)]
 
-    print("Length of list is {l} for paths {ep}".format(l=len(filelist), ep=expandedPaths))
+    if maxFiles > 0 and len(filelist) > maxFiles:
+        filelist = filelist[:maxFiles]
+
+    print(f"Length of list is {len(filelist)} for paths {expandedPaths}")
+    if len(filelist) == 0:
+        print()
+        print("WARNING! 0 files selected, please check")
+        print()
+        exit(0)
 
     return filelist

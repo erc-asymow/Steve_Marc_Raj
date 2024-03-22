@@ -71,6 +71,8 @@ def common_parser():
 
     parser.add_argument("-iso","--isoDefinition",help="Choose between the old and new isolation definition, 0 is old, 1 is new", default=1, type=int, choices = [0,1])
     parser.add_argument("--noNormalizeMCsumGenWeights", dest="normalizeMCsumGenWeights", action="store_false", help="Divide MC yields by sum of gen weigths (the sum is stored anyway so it can be done later offline)")
+    parser.add_argument("--maxFiles", help="Maximum number of files, for tests (default is all)",
+                        type=int, default=0)
     return parser
         
 if __name__ == "__main__":    
@@ -199,6 +201,8 @@ if __name__ == "__main__":
                         outfile = f"{outdir}tnp_{step}_{xrun}_{postfix}.root"                        
                     outfiles.append(outfile)
                     cmd = f"python {executable} -i {inpath} -o {outfile} -e {wp} -c {ch} -p {parity} -y {args.year} -iso {args.isoDefinition}"
+                    if args.maxFiles > 0:
+                        cmd += f" --maxFiles {maxFiles}"
                     if xrun == "data":
                         cmd += " --isData"
                     else:

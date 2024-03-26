@@ -291,7 +291,7 @@ d = d.Alias("Tag_outExtraIdx", "Muon_standaloneExtraIdx")
 # for tracking we may want to test efficiencies by charge, but in that case we enforce the (other) charge on the tag
 # under the assumption that tag and probe muons have opposite charge (but we still don't force opposite charge explicitly)
 TagAntiChargeCut = ""
-if args.efficiency == 2 and args.charge:
+if args.efficiency in [2, 9] and args.charge:
     TagAntiChargeCut = " && Tag_charge < 0" if args.charge > 0 else " && Tag_charge > 0" # note that we swap charge 
 # now define the tag muon (Muon_isGlobal might not be necessary, but shouldn't hurt really)
 d = d.Define("Tag_Muons", f"Muon_pt > {args.tagPt} && abs(Muon_eta) < 2.4 && Muon_pfRelIso04_all < {args.tagIso} && abs(Muon_dxybs) < 0.05 && Muon_mediumId && Muon_isGlobal && isTriggeredMuon && isGenMatchedMuon {TagAntiChargeCut}")
@@ -949,7 +949,7 @@ elif args.efficiency == 9:
 
 elif args.efficiency == 10:
 
-    # P(tracker or global muon | tracker-seeded track)
+    # P(tracker and not global muon | tracker-seeded track)
     # with tracker and global muons defined with all appropriate criteria 
 
     if(args.isData):
@@ -1011,6 +1011,8 @@ elif args.efficiency == 10:
     makeAndSaveHistograms(d, histo_name, "Reco_trackerMuon", binning_mass, binning_pt, binning_eta, scaleFactor=scale)
 
 elif args.efficiency == 11:
+
+    # P(looseID + dxy_bs | tracker or global)
 
     if(args.isData != 1):
         d = d.Define("GenMatchedIdx","GenMatchedIdx(GenMuonBare_eta, GenMuonBare_phi, Muon_eta, Muon_phi)")

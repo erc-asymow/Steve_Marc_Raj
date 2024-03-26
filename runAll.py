@@ -194,7 +194,7 @@ if __name__ == "__main__":
                         step += "plus" if ch == 1 else "minus"
                     if parity:
                         step += "odd" if parity == -1 else "even"
-                    if wp == 2 and args.noOppositeChargeTracking and not args.SameCharge:
+                    if wp in [2, 9] and args.noOppositeChargeTracking and not args.SameCharge:
                         postfixTracking = postfix.replace("oscharge1", "oscharge0")
                         outfile = f"{outdir}tnp_{step}_{xrun}_{postfixTracking}.root"
                     else:
@@ -217,8 +217,8 @@ if __name__ == "__main__":
                         cmd += " -nw"
                     if args.noOppositeCharge:
                         cmd += " -nos"
-                    if args.noOppositeChargeTracking and wp == 2:
-                        cmd += " --noOppositeChargeTracking "
+                    if wp in [2, 9] and not args.noOppositeChargeTracking:
+                        cmd += " --oppositeChargeTracking "
                     if args.SameCharge:
                         cmd += " --SameCharge"
                     print("")

@@ -58,7 +58,7 @@ def make_jsonhelper(filename):
 parser = common_parser()
 
 parser.add_argument("-e","--efficiency",
-		    help="1 for reco, 2 for 'tracking', 3 for idip, 4 for trigger, 5 for isolation, 6 for isolation without trigger, 7 for isolation with failing trigger, 8 for veto (loose ID+dxybs<0.05), 9 for P(tracker-seeded track | Standalone muon), 10 for p(tracker muon | tracker-seeded track and not global), 11 for veto on top of 'global or tracker' ",
+		    help="1 for reco, 2 for 'tracking', 3 for idip, 4 for trigger, 5 for isolation, 6 for isolation without trigger, 7 for isolation with failing trigger, 8 for veto (loose ID+dxybs<0.05) on top of global muons, 9 for P(tracker-seeded track | Standalone muon), 10 for p(tracker muon and not global| tracker-seeded track), 11 for veto on top of 'global or tracker' ",
                     type=int, choices=range(1,12))
 parser.add_argument("--testVetoStrategy",
                     default=0,
@@ -1081,3 +1081,4 @@ elapsed = time.time() - tstart
 elapsed_cpu = time.process_time() - cpustrat
 print('Execution time:', elapsed, 'seconds')
 print('CPU Execution time:', elapsed_cpu , 'seconds')
+print()

@@ -155,7 +155,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     # compare pt values within some tolerance
-    if args.histMinPt < (args.innerTrackMinPt + 0.01):
+    if (args.histMinPt + 0.01) < args.innerTrackMinPt:
         raise IOError(f"Inconsistent values for options --histMinPt ({args.histMinPt}) and --innerTrackMinPt ({args.innerTrackMinPt}).\nThe former must not be smaller than the latter.\n")
 
     outdir = args.outdir

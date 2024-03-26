@@ -96,7 +96,7 @@ tstart = time.time()
 cpustrat = time.process_time()
 
 # compare pt values within some tolerance
-if args.histMinPt < (args.innerTrackMinPt + 0.01):
+if (args.histMinPt + 0.01) < args.innerTrackMinPt:
     raise IOError(f"Inconsistent values for options --histMinPt ({args.histMinPt}) and --innerTrackMinPt ({args.innerTrackMinPt}).\nThe former must not be smaller than the latter.\n")
 
 if args.isData & args.genLevelEfficiency:
@@ -1094,3 +1094,4 @@ elapsed_cpu = time.process_time() - cpustrat
 print('Execution time:', elapsed, 'seconds')
 print('CPU Execution time:', elapsed_cpu , 'seconds')
 print()
+exit(0)

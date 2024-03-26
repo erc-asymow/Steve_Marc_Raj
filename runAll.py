@@ -44,9 +44,9 @@ workingPoints = { 1: "reco",
                   6: "isonotrig",
                   7: "isofailtrig",
                   8: "veto",
-                  9: "tracking_trackSeededTrack",
-                  10: "reco_trackerMuon",
-                  11: "veto_trackerOrGlobalMuon",
+                  9: "trackingTrackSeededTrack",
+                  10: "recoTrackerMuon",
+                  11: "vetoTrackerOrGlobalMuon",
                  }
 
 def common_parser():

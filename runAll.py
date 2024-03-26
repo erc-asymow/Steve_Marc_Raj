@@ -73,6 +73,15 @@ def common_parser():
     parser.add_argument("--noNormalizeMCsumGenWeights", dest="normalizeMCsumGenWeights", action="store_false", help="Divide MC yields by sum of gen weigths (the sum is stored anyway so it can be done later offline)")
     parser.add_argument("--maxFiles", help="Maximum number of files, for tests (default is all)",
                         type=int, default=0)
+    # customize pt ranges and muon/track pt selection
+    parser.add_argument("--histMinPt", help="Minimum value for the histogram pt binning",
+                        type=float, default=10)
+    parser.add_argument("--innerTrackMinPt", help="Minimum value for the Track/Muon pt (should always be smaller than --histMinPt",
+                        type=float, default=10)
+    parser.add_argument("--standaloneMinPt", help="Minimum value for the standalone muon pt cut",
+                        type=float, default=15)
+
+    
     return parser
         
 if __name__ == "__main__":    
@@ -144,6 +153,10 @@ if __name__ == "__main__":
     #parser.add_argument('-exe', '--executable', default="Steve.py", type=str, choices=["Steve.py", "Steve_tracker.py"],
     #                    help='Choose script to run')
     args = parser.parse_args()
+
+    # compare pt values within some tolerance
+    if args.histMinPt < (args.innerTrackMinPt + 0.01):
+        raise IOError(f"Inconsistent values for options --histMinPt ({args.histMinPt}) and --innerTrackMinPt ({args.innerTrackMinPt}).\nThe former must not be smaller than the latter.\n")
 
     outdir = args.outdir
     if not outdir.endswith("/"):

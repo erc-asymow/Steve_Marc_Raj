@@ -95,6 +95,10 @@ args = parser.parse_args()
 tstart = time.time()
 cpustrat = time.process_time()
 
+# compare pt values within some tolerance
+if args.histMinPt < (args.innerTrackMinPt + 0.01):
+    raise IOError(f"Inconsistent values for options --histMinPt ({args.histMinPt}) and --innerTrackMinPt ({args.innerTrackMinPt}).\nThe former must not be smaller than the latter.\n")
+
 if args.isData & args.genLevelEfficiency:
     raise RuntimeError('\'genLevelEfficiency\' option not supported for data')
 
@@ -123,13 +127,7 @@ files=[]
 files = makeFilelist(args.input_path, maxFiles=args.maxFiles)
 # print(files)
 
-# for i in range(len(args.input_path)):
-#     for root, dirnames, filenames in os.walk(args.input_path[i]):
-#         for filename in filenames:
-#             if filename.endswith('.root'):
-#                 files.append(os.path.join(root, filename))
-
-if args.charge and args.efficiency in [2]:
+if args.charge and args.efficiency in [2, 9]:
     print("")
     print("   WARNING: charge splitting for tracking efficiency is implemented using the tag muon (with the other charge)")
     print("")
@@ -153,7 +151,15 @@ d = d.Alias("Track_Y", "Track_vy")
 
 masshighut = 200
 
-binning_pt = array('d',[15.,20.,24., 26., 28., 30., 32., 34., 36., 38., 40., 42., 44., 47., 50., 55., 60., 65.])
+minStandaloneNumberOfValidHits = args.standaloneValidHits
+minStandalonePt = args.standaloneMinPt
+minInnerTrackPt = args.innerTrackMinPt
+minHistPt = args.histMinPt
+
+default_pt_binning = [10., 15., 20., 24., 26., 28., 30., 32., 34., 36., 38., 40., 42., 44., 47., 50., 55., 60., 65.]
+default_pt_binning = [x for x in default_pt_binning if (x+0.1) >= minHistPt]
+
+binning_pt = array('d', default_pt_binning)
 binning_eta = array('d',[round(-2.4 + i*0.1,2) for i in range(49)])
 binning_mass = array('d',[60 + i for i in range(masshighut-60+1)])
 binning_charge = array('d',[-1.5,0,1.5])
@@ -181,8 +187,6 @@ GENXBINS.push_back(ROOT.std.vector('double')(binning_pt))
 GENXBINS.push_back(ROOT.std.vector('double')(binning_eta))
 GENXBINS.push_back(ROOT.std.vector('double')(binning_charge))
 GENXBINS.push_back(ROOT.std.vector('double')(binning_u))
-
-minStandaloneNumberOfValidHits = args.standaloneValidHits
 
 if(args.isData):
     d = d.Define("gen_weight","1")
@@ -296,8 +300,10 @@ if args.efficiency in [2, 9] and args.charge:
 # now define the tag muon (Muon_isGlobal might not be necessary, but shouldn't hurt really)
 d = d.Define("Tag_Muons", f"Muon_pt > {args.tagPt} && abs(Muon_eta) < 2.4 && Muon_pfRelIso04_all < {args.tagIso} && abs(Muon_dxybs) < 0.05 && Muon_mediumId && Muon_isGlobal && isTriggeredMuon && isGenMatchedMuon {TagAntiChargeCut}")
 
+d = d.Filter("Sum(Tag_Muons) > 0") # would this make the loop a little faster?
+
 if (args.genLevelEfficiency):
-    d = d.Define("zero","0").Define("one","1") # is this really needed? Can't we just pass 1 or 0 in the functions where we need it?
+    d = d.DefinePerSample("zero","0").DefinePerSample("one","1")
     d = d.Define("GenPart_postFSRLepIdx1","PostFSRIdx(GenPart_pdgId,GenPart_status,GenPart_genPartIdxMother,GenPart_statusFlags,GenPart_pt,zero)")
     d = d.Define("GenPart_postFSRLepIdx2","PostFSRIdx(GenPart_pdgId,GenPart_status,GenPart_genPartIdxMother,GenPart_statusFlags,GenPart_pt,one)")
     d = d.Define("goodgenpt","goodgenvalue(GenPart_pt,GenPart_postFSRLepIdx1,GenPart_postFSRLepIdx2,GenPart_eta,GenPart_phi,GenPart_status,GenPart_pdgId)")
@@ -312,7 +318,7 @@ if (args.genLevelEfficiency):
 
 # Open output file
 f_out = ROOT.TFile(args.output_file, "RECREATE")
-    
+
 ## Tracks for reco efficiency
 if(args.efficiency == 1):
     if not (args.genLevelEfficiency):
@@ -329,10 +335,10 @@ if(args.efficiency == 1):
             chargeCut = f" && Track_charge {sign} 0"
 
         # define all probes
-        d = d.Define("Probe_Tracks", f"Track_pt > 15 && abs(Track_eta) < 2.4 && Track_trackOriginalAlgo != 13 && Track_trackOriginalAlgo != 14 && isGenMatchedTrack && (Track_qualityMask & 4) {chargeCut}")
+        d = d.Define("Probe_Tracks", f"Track_pt > {minInnerTrackPt} && abs(Track_eta) < 2.4 && Track_trackOriginalAlgo != 13 && Track_trackOriginalAlgo != 14 && isGenMatchedTrack && (Track_qualityMask & 4) {chargeCut}")
         # condition for passing probes
         # FIXME: add other criteria to the MergedStandAloneMuon to accept the matching? E.g. |eta| < 2.4? No, it is an acceptance on numerator which we don't want
-        d = d.Define("goodStandaloneMuon", f"MergedStandAloneMuon_pt > 15 && MergedStandAloneMuon_numberOfValidHits >= {minStandaloneNumberOfValidHits}")
+        d = d.Define("goodStandaloneMuon", f"MergedStandAloneMuon_pt > {minStandalonePt} && MergedStandAloneMuon_numberOfValidHits >= {minStandaloneNumberOfValidHits}")
         d = d.Define("passCondition_reco", "trackStandaloneDR(Track_eta, Track_phi, MergedStandAloneMuon_eta[goodStandaloneMuon], MergedStandAloneMuon_phi[goodStandaloneMuon]) < 0.3")
         
         d = d.Define("All_TPPairs", f"CreateTPPair(Tag_Muons, Probe_Tracks, {doOS}, Tag_charge, Track_charge, Tag_inExtraIdx, Track_extraIdx, 0, {doSameCharge})")
@@ -340,7 +346,9 @@ if(args.efficiency == 1):
         d = d.Define("All_absDiffZ", "getTPabsDiffZ(All_TPPairs, Tag_Z, Track_Z)")
         
         # overriding previous pt binning
-        binning_pt = array('d',[15., 20., 24., 26., 30., 34., 38., 42., 46., 50., 55., 60., 65.]) #modified to be used also for veto
+        default_pt_binning = [10., 15., 20., 24., 26., 30., 34., 38., 42., 46., 50., 55., 60., 65.]
+        default_pt_binning = [x for x in default_pt_binning if (x+0.1) >= minHistPt]
+        binning_pt = array('d',default_pt_binning)
         ## binning is currently 50,130 GeV, but it is overridden below 
         # also for mass
         massLow  =  60
@@ -394,7 +402,7 @@ elif (args.efficiency == 2):
             d = d.Define("GenMatchedIdx","GenMatchedIdx(GenMuonBare_eta, GenMuonBare_phi, MergedStandAloneMuon_eta, MergedStandAloneMuon_phi, 0.3)")
 
         # All probes, standalone muons from MergedStandAloneMuon_XX    
-        d = d.Define("Probe_MergedStandMuons",f"MergedStandAloneMuon_pt > 15 && abs(MergedStandAloneMuon_eta) < 2.4 && isGenMatchedMergedStandMuon && MergedStandAloneMuon_numberOfValidHits >= {minStandaloneNumberOfValidHits}")
+        d = d.Define("Probe_MergedStandMuons",f"MergedStandAloneMuon_pt > {minStandalonePt} && abs(MergedStandAloneMuon_eta) < 2.4 && isGenMatchedMergedStandMuon && MergedStandAloneMuon_numberOfValidHits >= {minStandaloneNumberOfValidHits}")
         #
         d = d.Define("All_TPPairs", f"CreateTPPair(Tag_Muons, Probe_MergedStandMuons, {doOStracking}, Tag_charge, MergedStandAloneMuon_charge, Tag_outExtraIdx, MergedStandAloneMuon_extraIdx, 0, {doSameCharge})")
         d = d.Define("All_TPmass","getTPmass(All_TPPairs, Tag_pt, Tag_eta, Tag_phi, MergedStandAloneMuon_pt, MergedStandAloneMuon_eta, MergedStandAloneMuon_phi)")
@@ -415,7 +423,7 @@ elif (args.efficiency == 2):
 
         # condition for passing probe, start from Muon_XX and then add match of extraID indices between Muon and MergedStandAloneMuon
         #d = d.Define("Muon_standaloneNvalidHits", "getGlobalMuon_MergedStandAloneMuonVar(Muon_standaloneExtraIdx, MergedStandAloneMuon_extraIdx, MergedStandAloneMuon_numberOfValidHits)")
-        d = d.Define("Muon_forTracking", "Muon_isGlobal && Muon_pt > 10 && Muon_standalonePt > 15 && selfDeltaR(Muon_eta, Muon_phi, Muon_standaloneEta, Muon_standalonePhi) < 0.3 && Muon_highPurity")
+        d = d.Define("Muon_forTracking", f"Muon_isGlobal && Muon_pt > {minInnerTrackPt} && Muon_standalonePt > {minStandalonePt} && selfDeltaR(Muon_eta, Muon_phi, Muon_standaloneEta, Muon_standalonePhi) < 0.3 && Muon_highPurity")
         ## && Muon_standaloneNvalidHits >= {minStandaloneNumberOfValidHits}
         # 
         # check Muon exists with proper criteria and matching extraIdx with the standalone muon 
@@ -430,8 +438,12 @@ elif (args.efficiency == 2):
         d = d.Define("passCondition", "getVariables(TPPairs, passCondition_tracking, 2)")
         d = d.Define("failCondition", "!passCondition")
 
-        # use the minimum pt of the standalone muon used above to define the range, also a larger upper edge because the pt resolution of standalone muons is bad
-        binning_pt = array('d',[15., 24., 35., 45., 55., 65.]) #modified to be used also for veto
+        # the binning should match the standalone pt (usually 15),
+        # but from 10 to 15 the efficiency is probably impossible to measure, so this bin will just remain empty
+        # and should be filled with the content of the bin immediately above it afterwards at analysis level if needed
+        default_pt_binning = [10., 15., 24., 35., 45., 55., 65.]
+        default_pt_binning = [x for x in default_pt_binning if (x+0.1) >= minHistPt]
+        binning_pt = array('d', default_pt_binning)
 
         # Here we are using the muon variables to calulate the mass for the passing probes for tracking efficiency
         ## However the TPPairs were made using indices from MergedStandAloneMuon_XX collections, which are not necessarily valid for Muon_XX
@@ -485,10 +497,11 @@ elif args.efficiency < 9:
         chargeCut = f" && Muon_charge {sign} 0"
         
     d = d.Define("Muon_standaloneNvalidHits", "getGlobalMuon_MergedStandAloneMuonVar(Muon_standaloneExtraIdx, MergedStandAloneMuon_extraIdx, MergedStandAloneMuon_numberOfValidHits)")
-    d = d.Define("BasicProbe_Muons", f"Muon_isGlobal && Muon_pt > 15 && Muon_standalonePt > 15 && abs(Muon_eta) < 2.4 && selfDeltaR(Muon_eta, Muon_phi, Muon_standaloneEta, Muon_standalonePhi) < 0.3 && Muon_highPurity && isGenMatchedMuon {chargeCut} && Muon_standaloneNvalidHits >= {minStandaloneNumberOfValidHits}")
+    d = d.Define("BasicProbe_Muons", f"Muon_isGlobal && Muon_pt > {minInnerTrackPt} && Muon_standalonePt > {minStandalonePt} && abs(Muon_eta) < 2.4 && selfDeltaR(Muon_eta, Muon_phi, Muon_standaloneEta, Muon_standalonePhi) < 0.3 && Muon_highPurity && isGenMatchedMuon {chargeCut} && Muon_standaloneNvalidHits >= {minStandaloneNumberOfValidHits}")
     # add MergedStandAloneMuon_numberOfValidHits > 0 matching the global muon to its standalone one 
     d = d.Define("All_TPPairs", f"CreateTPPair(Tag_Muons, BasicProbe_Muons, {doOS}, Tag_charge, Muon_charge, Tag_inExtraIdx, Muon_innerTrackExtraIdx, 1, {doSameCharge})") # these are all Muon_XX, so might just exclude same index in the loop
     d = d.Define("All_TPmass","getTPmass(All_TPPairs, Tag_pt, Tag_eta, Tag_phi, Muon_pt, Muon_eta, Muon_phi)")
+
     massLow  =  60
     if args.zqtprojection:
         massHigh = masshighut #BE CAREFUL HERE, THIS IS FOR FITS AS A FUNCTION OF UT, RANGE IS NARROWER FOR UT INTEGRATED FITS (massHigh = 120)
@@ -516,8 +529,8 @@ elif args.efficiency < 9:
 
     ## IMPORTANT: define only the specific condition to be passed, not with the && of previous steps (although in principle it is the same as long as that one is already applied)
     ##            also, these are based on the initial Muon collection, with no precooked filtering
+    d = d.Define("passCondition_veto", "Muon_looseId && abs(Muon_dxybs) < 0.05")
     d = d.Define("passCondition_IDIP", "Muon_mediumId && abs(Muon_dxybs) < 0.05")
-    d = d.Define("passCondition_newVeto", "Muon_looseId && abs(Muon_dxybs) < 0.05")
     d = d.Define("passCondition_Trig", "isTriggeredMuon")
     #d = d.Define("passCondition_Iso",  "Muon_pfRelIso04_all < 0.15") #FOR NOW OLD ISO DEFINITION. OTHER COMMENTED LINES HAVE NEW DEFITION (BOTH CHARGED AND INCLUSIVE)
     if(args.isoDefinition == 1):
@@ -843,7 +856,7 @@ elif args.efficiency < 9:
     if (args.efficiency == 8):
         if not (args.genLevelEfficiency):
             # define condition for passing probes
-            d = d.Define("passCondition", "getVariables(TPPairs, passCondition_newVeto, 2)")
+            d = d.Define("passCondition", "getVariables(TPPairs, passCondition_veto, 2)")
             d = d.Define("failCondition", "!passCondition")            
             # pass probes
             d = d.Define("Probe_pt_pass",  "BasicProbe_pt[passCondition]")
@@ -880,7 +893,7 @@ elif args.efficiency == 9:
         d = d.Define("GenMatchedIdx","GenMatchedIdx(GenMuonBare_eta, GenMuonBare_phi, MergedStandAloneMuon_eta, MergedStandAloneMuon_phi, 0.3)")
 
     # All probes, standalone muons from MergedStandAloneMuon_XX    
-    d = d.Define("Probe_MergedStandMuons",f"MergedStandAloneMuon_pt > 15 && abs(MergedStandAloneMuon_eta) < 2.4 && isGenMatchedMergedStandMuon && MergedStandAloneMuon_numberOfValidHits >= {minStandaloneNumberOfValidHits}")
+    d = d.Define("Probe_MergedStandMuons",f"MergedStandAloneMuon_pt > {minStandalonePt} && abs(MergedStandAloneMuon_eta) < 2.4 && isGenMatchedMergedStandMuon && MergedStandAloneMuon_numberOfValidHits >= {minStandaloneNumberOfValidHits}")
     #
     d = d.Define("All_TPPairs", f"CreateTPPair(Tag_Muons, Probe_MergedStandMuons, {doOStracking}, Tag_charge, MergedStandAloneMuon_charge, Tag_outExtraIdx, MergedStandAloneMuon_extraIdx, 0, {doSameCharge})")
     d = d.Define("All_TPmass","getTPmass(All_TPPairs, Tag_pt, Tag_eta, Tag_phi, MergedStandAloneMuon_pt, MergedStandAloneMuon_eta, MergedStandAloneMuon_phi)")
@@ -899,13 +912,15 @@ elif args.efficiency == 9:
         d = d.Redefine("Probe_pt","getGenVariables(TPPairs,GenMatchedIdx,GenMuonBare_pt,2)")
         d = d.Redefine("Probe_eta","getGenVariables(TPPairs,GenMatchedIdx,GenMuonBare_eta,2)")
 
-    # define all probes (tracks with pt > 15 for now)
-    d = d.Define("goodTracks", f"Track_pt > 15 && abs(Track_eta) < 2.4 && Track_trackOriginalAlgo != 13 && Track_trackOriginalAlgo != 14 && (Track_qualityMask & 4)")
+    # define all probes
+    d = d.Define("goodTracks", f"Track_pt > {minInnerTrackPt} && abs(Track_eta) < 2.4 && Track_trackOriginalAlgo != 13 && Track_trackOriginalAlgo != 14 && (Track_qualityMask & 4)")
     # note: the following function is symmetric between the two collections (even though the internally defined name seems to be asymmetric)
     # the important thing is just that the all–probes collctions is passed at the first two arguments
     d = d.Define("passCondition_tracking", "trackStandaloneDR(MergedStandAloneMuon_eta, MergedStandAloneMuon_phi, Track_eta[goodTracks], Track_phi[goodTracks]) < 0.3")
 
-    binning_pt = array('d',[15., 24., 35., 45., 55., 65.])
+    default_pt_binning = [10., 15., 24., 35., 45., 55., 65.]
+    default_pt_binning = [x for x in default_pt_binning if (x+0.1) >= minHistPt]
+    binning_pt = array('d', default_pt_binning)
 
     d = d.Define("passCondition", "getVariables(TPPairs, passCondition_tracking, 2)")
     d = d.Define("failCondition", "!passCondition")
@@ -957,14 +972,16 @@ elif args.efficiency == 10:
         chargeCut = f" && Track_charge {sign} 0"
 
     # define all probes
-    d = d.Define("Probe_Tracks", f"Track_pt > 15 && abs(Track_eta) < 2.4 && Track_trackOriginalAlgo != 13 && Track_trackOriginalAlgo != 14 && isGenMatchedTrack && (Track_qualityMask & 4) {chargeCut}")
+    d = d.Define("Probe_Tracks", f"Track_pt > {minInnerTrackPt} && abs(Track_eta) < 2.4 && Track_trackOriginalAlgo != 13 && Track_trackOriginalAlgo != 14 && isGenMatchedTrack && (Track_qualityMask & 4) {chargeCut}")
 
     d = d.Define("All_TPPairs", f"CreateTPPair(Tag_Muons, Probe_Tracks, {doOS}, Tag_charge, Track_charge, Tag_inExtraIdx, Track_extraIdx, 0, {doSameCharge})")
     d = d.Define("All_TPmass", "getTPmass(All_TPPairs, Tag_pt, Tag_eta, Tag_phi, Track_pt, Track_eta, Track_phi)")
     d = d.Define("All_absDiffZ", "getTPabsDiffZ(All_TPPairs, Tag_Z, Track_Z)")
 
     # overriding previous pt binning
-    binning_pt = array('d',[15., 20., 24., 26., 30., 34., 38., 42., 46., 50., 55., 60., 65.]) #modified to be used also for veto
+    default_pt_binning = [10., 15., 20., 24., 26., 30., 34., 38., 42., 46., 50., 55., 60., 65.]
+    default_pt_binning = [x for x in default_pt_binning if (x+0.1) >= minHistPt]
+    binning_pt = array('d', default_pt_binning)
     massLow  =  60
     massHigh = 120
     binning_mass = array('d',[massLow + i for i in range(int(1+massHigh-massLow))])
@@ -982,9 +999,9 @@ elif args.efficiency == 10:
 
     # condition for passing probe
     d = d.Define("Muon_standaloneNvalidHits", "getGlobalMuon_MergedStandAloneMuonVar(Muon_standaloneExtraIdx, MergedStandAloneMuon_extraIdx, MergedStandAloneMuon_numberOfValidHits)")
-    d = d.Define("Muon_isGoodGlobal", f"Muon_isGlobal && Muon_standalonePt > 15 && selfDeltaR(Muon_eta, Muon_phi, Muon_standaloneEta, Muon_standalonePhi) < 0.3 && Muon_standaloneNvalidHits >= {minStandaloneNumberOfValidHits}")
+    d = d.Define("Muon_isGoodGlobal", f"Muon_isGlobal && Muon_standalonePt > {minStandalonePt} && selfDeltaR(Muon_eta, Muon_phi, Muon_standaloneEta, Muon_standalonePhi) < 0.3 && Muon_standaloneNvalidHits >= {minStandaloneNumberOfValidHits}")
     d = d.Define("Muon_isGoodTracker", "Muon_isTracker && Muon_innerTrackOriginalAlgo != 13 && Muon_innerTrackOriginalAlgo != 14")
-    d = d.Define("Muon_forTracking", "Muon_pt > 10 && Muon_highPurity && Muon_isGoodTracker && not Muon_isGoodGlobal")
+    d = d.Define("Muon_forTracking", "Muon_pt > {minInnerTrackPt} && Muon_highPurity && Muon_isGoodTracker && not Muon_isGoodGlobal")
     # 
     # check Muon exists with proper criteria and matching extraIdx with the tracker-seeded track 
     d = d.Define("passCondition_reco",
@@ -1016,10 +1033,10 @@ elif args.efficiency == 11:
         chargeCut = f" && Muon_charge {sign} 0"
 
     d = d.Define("Muon_standaloneNvalidHits", "getGlobalMuon_MergedStandAloneMuonVar(Muon_standaloneExtraIdx, MergedStandAloneMuon_extraIdx, MergedStandAloneMuon_numberOfValidHits)")
-    d = d.Define("Muon_isGoodGlobal", f"Muon_isGlobal && Muon_standalonePt > 15 && selfDeltaR(Muon_eta, Muon_phi, Muon_standaloneEta, Muon_standalonePhi) < 0.3 && Muon_standaloneNvalidHits >= {minStandaloneNumberOfValidHits}")
+    d = d.Define("Muon_isGoodGlobal", f"Muon_isGlobal && Muon_standalonePt > {minStandalonePt} && selfDeltaR(Muon_eta, Muon_phi, Muon_standaloneEta, Muon_standalonePhi) < 0.3 && Muon_standaloneNvalidHits >= {minStandaloneNumberOfValidHits}")
     d = d.Define("Muon_isGoodTracker", "Muon_isTracker && Muon_innerTrackOriginalAlgo != 13 && Muon_innerTrackOriginalAlgo != 14")
 
-    d = d.Define("BasicProbe_Muons", f"Muon_pt > 10 && abs(Muon_eta) < 2.4 && Muon_highPurity && isGenMatchedMuon {chargeCut} && (Muon_isGoodGlobal || Muon_isGoodTracker)")
+    d = d.Define("BasicProbe_Muons", f"Muon_pt > {minInnerTrackPt} && abs(Muon_eta) < 2.4 && Muon_highPurity && isGenMatchedMuon {chargeCut} && (Muon_isGoodGlobal || Muon_isGoodTracker)")
     d = d.Define("All_TPPairs", f"CreateTPPair(Tag_Muons, BasicProbe_Muons, {doOS}, Tag_charge, Muon_charge, Tag_inExtraIdx, Muon_innerTrackExtraIdx, 1, {doSameCharge})") # these are all Muon_XX, so might just exclude same index in the loop
     d = d.Define("All_TPmass","getTPmass(All_TPPairs, Tag_pt, Tag_eta, Tag_phi, Muon_pt, Muon_eta, Muon_phi)")
     massLow  =  60

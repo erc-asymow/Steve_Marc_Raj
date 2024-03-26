@@ -234,6 +234,8 @@ if __name__ == "__main__":
                         cmd += " --oppositeChargeTracking "
                     if args.SameCharge:
                         cmd += " --SameCharge"
+                    # pt customization options
+                    cmd += f" --histMinPt {args.histMinPt} --innerTrackMinPt {args.innerTrackMinPt} --standaloneMinPt {args.standaloneMinPt} "
                     print("")
                     eventParityText = "all" if parity == 0 else "odd" if parity < 0 else "even"
                     print(f"Running for {xrun} and {step} efficiency ({eventParityText} events)")

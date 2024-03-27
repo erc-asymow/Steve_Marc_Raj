@@ -35,7 +35,7 @@ void initializeVertexPileupWeights(const std::string& _filename_vertexPileupWeig
     std::cerr << "WARNING: Failed to open prefiring file " << _filename_vertexPileupWeights << "\n";
     exit(EXIT_FAILURE);
   }
-  std::cout << "INFO >>> Initializing histograms for vertex-pileup weights from file " << _filename_vertexPileupWeights << std::endl;
+  std::cout << "INFO --> Initializing histograms for vertex-pileup weights from file " << _filename_vertexPileupWeights << std::endl;
   if (year=="2016"){
     std::vector<std::string> eras = {"BtoF", "GtoH"};
     int id = 1;
@@ -216,58 +216,58 @@ RVec<Bool_t> hasStandAloneOrGlobalMatch(RVec<Float_t> &Track_eta, RVec<Float_t> 
 					RVec<Bool_t> &Muon_isStandalone,
 					RVec<Bool_t> &Muon_isGlobal)
 {
-  RVec<Int_t> hasStandAloneOrGlobalMatch;
-  for(int iTrack=0;iTrack<Track_eta.size();iTrack++){
-    bool has_match = false;
-    for (int iMuon=0; iMuon<Muon_eta.size(); ++iMuon){
-      if (!(Muon_isStandalone[iMuon] || Muon_isGlobal[iMuon])) continue;
-      if (deltaR(Muon_eta[iMuon], Muon_phi[iMuon], Track_eta[iTrack], Track_phi[iTrack]) < 0.1)
-      {
-	has_match = 1; 
-	break;
-      }
-    } 
-    hasStandAloneOrGlobalMatch.push_back(has_match);
-  }
-  return hasStandAloneOrGlobalMatch;
+	RVec<Int_t> hasStandAloneOrGlobalMatch(Track_eta.size(), false);
+	for(int iTrack = 0; iTrack < Track_eta.size(); iTrack++){
+		bool has_match = false;
+		for (int iMuon = 0; iMuon < Muon_eta.size(); ++iMuon){
+			if (!(Muon_isStandalone[iMuon] || Muon_isGlobal[iMuon])) continue;
+			if (deltaR(Muon_eta[iMuon], Muon_phi[iMuon], Track_eta[iTrack], Track_phi[iTrack]) < 0.1)
+			{
+				has_match = 1;
+				break;
+			}
+		}
+		hasStandAloneOrGlobalMatch[iTrack] = has_match;
+	}
+	return hasStandAloneOrGlobalMatch;
 }
 
 
 RVec<Float_t> trackMuonDR(RVec<Float_t> &Track_eta, RVec<Float_t> &Track_phi,
 			  RVec<Float_t> &Muon_eta,RVec<Float_t> &Muon_phi)
 {
-  RVec<Float_t> trackMuonDR; 
-  for(int iTrack=0;iTrack<Track_eta.size();iTrack++){
-    float dr = 999.;
-    float tmp_dr  = 999.;
+	RVec<Float_t> trackMuonDR(Track_eta.size(), 999.);
+	for(int iTrack = 0; iTrack < Track_eta.size(); iTrack++){
+		float dr = 999.;
+		float tmp_dr  = 999.;
 
-    for (unsigned int iMuon=0; iMuon<Muon_eta.size(); ++iMuon){
-      tmp_dr  = deltaR(Muon_eta.at(iMuon), Muon_phi.at(iMuon), 
-		       Track_eta.at(iTrack), Track_phi.at(iTrack));
-      if (tmp_dr < dr) dr = tmp_dr;
-    }
-    trackMuonDR.push_back(dr);
-  }  
-  return trackMuonDR;
+		for (unsigned int iMuon = 0; iMuon < Muon_eta.size(); ++iMuon){
+			tmp_dr  = deltaR(Muon_eta.at(iMuon), Muon_phi.at(iMuon),
+							 Track_eta.at(iTrack), Track_phi.at(iTrack));
+			if (tmp_dr < dr) dr = tmp_dr;
+		}
+		trackMuonDR[iTrack] = dr;
+	}
+	return trackMuonDR;
 }
 
 
 RVec<Float_t> trackStandaloneDR(const RVec<Float_t> &Track_eta, const RVec<Float_t> &Track_phi,
                                 const RVec<Float_t> &Muon_standaloneEta, const RVec<Float_t> &Muon_standalonePhi)
 {
-   RVec<Float_t> trackStandaloneDR;
-   for(int iTrack=0;iTrack<Track_eta.size();iTrack++){
-     float dr = 999.;
-     float tmp_dr  = 999.;
+	RVec<Float_t> trackStandaloneDR(Track_eta.size(), 999.);
+	for(int iTrack = 0; iTrack < Track_eta.size(); iTrack++){
+		float dr = 999.;
+		float tmp_dr  = 999.;
      
-     for (unsigned int iMuon=0; iMuon<Muon_standaloneEta.size(); ++iMuon){
-       tmp_dr  = deltaR(Muon_standaloneEta.at(iMuon), Muon_standalonePhi.at(iMuon), Track_eta.at(iTrack), Track_phi.at(iTrack));
-       if (tmp_dr < dr) dr = tmp_dr;
-     } 
-     trackStandaloneDR.push_back(dr);
-   }
-   return trackStandaloneDR;
- }
+		for (unsigned int iMuon = 0; iMuon < Muon_standaloneEta.size(); ++iMuon){
+			tmp_dr  = deltaR(Muon_standaloneEta.at(iMuon), Muon_standalonePhi.at(iMuon), Track_eta.at(iTrack), Track_phi.at(iTrack));
+			if (tmp_dr < dr) dr = tmp_dr;
+		}
+		trackStandaloneDR[iTrack] = dr;
+	}
+	return trackStandaloneDR;
+}
 
 
 RVec<Float_t> coll1coll2DR(const RVec<Float_t> &coll1_eta, const RVec<Float_t> &coll1_phi,
@@ -517,18 +517,18 @@ RVec<Float_t> zqtprojectionGen(RVec<std::pair<int,int>> &TPPairs, RVec<int> &Gen
 }
 
 RVec<Bool_t> isOS(RVec<std::pair<int,int>> TPPairs, RVec<Int_t> Muon_charge, 
-		  RVec<Int_t> Cand_charge)
+				  RVec<Int_t> Cand_charge)
 {
-  RVec<Bool_t> isOS;
-  for (int i=0;i<TPPairs.size();i++){
-    std::pair<int,int> TPPair = TPPairs.at(i);
-    int tag_index = TPPair.first;
-    int probe_index = TPPair.second;
-    bool os = false;
-    if (Muon_charge[tag_index] != Cand_charge[probe_index]) os = true; //initially ==. We want this to return true for opposite sign pairs, right?
-    isOS.push_back(os);
-  }
-  return isOS;
+	RVec<Bool_t> isOS;
+	for (int i = 0; i < TPPairs.size(); i++){
+		std::pair<int,int> TPPair = TPPairs.at(i);
+		int tag_index = TPPair.first;
+		int probe_index = TPPair.second;
+		bool os = false;
+		if (Muon_charge[tag_index] != Cand_charge[probe_index]) os = true; //initially ==. We want this to return true for opposite sign pairs, right?
+		isOS.push_back(os);
+	}
+	return isOS;
 }
 
 

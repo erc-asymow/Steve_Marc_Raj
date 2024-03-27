@@ -1001,7 +1001,7 @@ elif args.efficiency == 10:
     d = d.Define("Muon_standaloneNvalidHits", "getGlobalMuon_MergedStandAloneMuonVar(Muon_standaloneExtraIdx, MergedStandAloneMuon_extraIdx, MergedStandAloneMuon_numberOfValidHits)")
     d = d.Define("Muon_isGoodGlobal", f"Muon_isGlobal && Muon_standalonePt > {minStandalonePt} && selfDeltaR(Muon_eta, Muon_phi, Muon_standaloneEta, Muon_standalonePhi) < 0.3 && Muon_standaloneNvalidHits >= {minStandaloneNumberOfValidHits}")
     d = d.Define("Muon_isGoodTracker", "Muon_isTracker && Muon_innerTrackOriginalAlgo != 13 && Muon_innerTrackOriginalAlgo != 14")
-    d = d.Define("Muon_forTracking", "Muon_pt > {minInnerTrackPt} && Muon_highPurity && Muon_isGoodTracker && not Muon_isGoodGlobal")
+    d = d.Define("Muon_forTracking", f"Muon_pt > {minInnerTrackPt} && Muon_highPurity && Muon_isGoodTracker && not Muon_isGoodGlobal")
     # 
     # check Muon exists with proper criteria and matching extraIdx with the tracker-seeded track 
     d = d.Define("passCondition_reco",
@@ -1094,4 +1094,3 @@ elapsed_cpu = time.process_time() - cpustrat
 print('Execution time:', elapsed, 'seconds')
 print('CPU Execution time:', elapsed_cpu , 'seconds')
 print()
-exit(0)

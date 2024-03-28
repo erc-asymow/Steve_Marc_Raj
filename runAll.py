@@ -90,6 +90,8 @@ if __name__ == "__main__":
                 "2017" : 37.99, # this includes the LS where the HLT_isoMu24 was not prescaled
                 "2018" : 59.81}
 
+    pb2fb = 1000.0 # conversion of cross section from pb to fb
+
     BR_TAUToMU = 0.1739
     BR_TAUToE = 0.1782
     xsec_ZmmPostVFP = 2001.9
@@ -219,7 +221,7 @@ if __name__ == "__main__":
                     if xrun == "data":
                         cmd += " --isData"
                     else:
-                        norm = lumiDict[args.year] * process["xsec"]
+                        norm = pb2fb * lumiDict[args.year] * process["xsec"]
                         cmd += f" --normFactor {norm}"
                         if process["isBkg"]:
                             cmd += " -b"

@@ -47,8 +47,9 @@ workingPoints = { 1: "reco",
 
 inputdir_dict = { "data" : "SingleMuon/", 
                   "mc" : ["DYJetsToMuMu_H2ErratumFix_TuneCP5_13TeV-powhegMiNNLO-pythia8-photos/",
-                          "DYJetsToMuMu_H2ErratumFix_PDFExt_TuneCP5_13TeV-powhegMiNNLO-pythia8-photos/",
-                          "DYJetsToMuMu_M-10to50_H2ErratumFix_TuneCP5_13TeV-powhegMiNNLO-pythia8-photos/"],
+                          "DYJetsToMuMu_H2ErratumFix_PDFExt_TuneCP5_13TeV-powhegMiNNLO-pythia8-photos/"
+                          #"DYJetsToMuMu_M-10to50_H2ErratumFix_TuneCP5_13TeV-powhegMiNNLO-pythia8-photos/"
+                          ],
                   "Ztautau" : "DYJetsToTauTau_M-50_AtLeastOneEorMuDecay_H2ErratumFix_TuneCP5_13TeV-powhegMiNNLO-pythia8-photos/",
                   "TTFullyleptonic" : "TTTo2L2Nu_TuneCP5_13TeV-powheg-pythia8/",
                   "TTSemileptonic" : "TTToSemiLeptonic_TuneCP5_13TeV-powheg-pythia8/",
@@ -56,7 +57,8 @@ inputdir_dict = { "data" : "SingleMuon/",
                   "WminusJets" : "WminusJetsToMuNu_H2ErratumFix_TuneCP5_13TeV-powhegMiNNLO-pythia8-photos/",
                   "ZZ" : "ZZTo2L2Nu_TuneCP5_13TeV_powheg_pythia8/", 
                   "WZ" : "WZ_TuneCP5_13TeV-pythia8/", 
-                  "WW" : "WWTo2L2Nu_TuneCP5_13TeV-powheg-pythia8" #"WW_TuneCP5_13TeV-pythia8/"
+                  "WW" : "WWTo2L2Nu_TuneCP5_13TeV-powheg-pythia8/", #"WW_TuneCP5_13TeV-pythia8/"
+                  "QCD" : "QCD_Pt-20_MuEnrichedPt15_TuneCP5_13TeV-pythia8/" 
 }
 #inputdir_data = "SingleMuon/"
 #inputdir_mc   = "DYJetsToMuMu_H2ErratumFix_TuneCP5_13TeV-powhegMiNNLO-pythia8-photos/"
@@ -66,7 +68,7 @@ inputdir_dict = { "data" : "SingleMuon/",
 #inputdir_WZ = "WZ_TuneCP5_13TeV-pythia8/"
 #inputdir_WW = "WW_TuneCP5_13TeV-pythia8/"   
 
-isBkg_dict = {"data": 0, "mc": 0, "Ztautau": 1, "TTSemileptonic": 1, "TTFullyleptonic": 1, "WplusJets": 1, "WminusJets":1, "ZZ": 1, "WZ": 1, "WW": 1}
+isBkg_dict = {"data": 0, "mc": 0, "Ztautau": 1, "TTSemileptonic": 1, "TTFullyleptonic": 1, "WplusJets": 1, "WminusJets":1, "ZZ": 1, "WZ": 1, "WW": 1, "QCD": 1}
 
 
 # -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -85,7 +87,7 @@ if __name__ == "__main__":
 
     parser.add_argument('-r',  '--run', help='Choose what to run, either data or MC, or both',
     					default=["all"], nargs="*",
-    					choices=["data", "mc", "stand", "bkg", "Ztautau", "TTSemileptonic", "TTFullyleptonic", "WplusJets", "WminusJets", "ZZ", "WZ", "WW", "all"])
+    					choices=["data", "mc", "stand", "bkg", "Ztautau", "TTSemileptonic", "TTFullyleptonic", "WplusJets", "WminusJets", "ZZ", "WZ", "WW", "QCD", "all"])
                     
     # FIXME: unless I change histogram names inside the files I can't merge different working points, I could just merge data with MC but not worth
     #parser.add_argument('-m',  '--merge', action='store_true', help='Merge root files in a new one')
@@ -162,6 +164,7 @@ if __name__ == "__main__":
         if dataset_run in ["all", "bkg", "ZZ"]: toRun.append("ZZ")
         if dataset_run in ["all", "bkg", "WZ"]: toRun.append("WZ")
         if dataset_run in ["all", "bkg", "WW"]: toRun.append("WW")
+        if dataset_run in ["all", "bkg", "QCD"]: toRun.append("QCD")
    
    
     outfiles = [] # store names of output files so to merge them if needed

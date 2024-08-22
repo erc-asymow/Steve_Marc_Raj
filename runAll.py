@@ -81,38 +81,9 @@ def common_parser():
     parser.add_argument("--standaloneMinPt", help="Minimum value for the standalone muon pt cut",
                         type=float, default=15)
 
-    
+
     return parser
-        
-                  7: "veto"
-}
 
-inputdir_dict = { "data" : "SingleMuon/", 
-                  "mc" : ["DYJetsToMuMu_H2ErratumFix_TuneCP5_13TeV-powhegMiNNLO-pythia8-photos/",
-                          "DYJetsToMuMu_H2ErratumFix_PDFExt_TuneCP5_13TeV-powhegMiNNLO-pythia8-photos/",
-                          "DYJetsToMuMu_M-10to50_H2ErratumFix_TuneCP5_13TeV-powhegMiNNLO-pythia8-photos/"],
-                  "Ztautau" : "DYJetsToTauTau_M-50_AtLeastOneEorMuDecay_H2ErratumFix_TuneCP5_13TeV-powhegMiNNLO-pythia8-photos/",
-                  "TTFullyleptonic" : "TTTo2L2Nu_TuneCP5_13TeV-powheg-pythia8/",
-                  "TTSemileptonic" : "TTToSemiLeptonic_TuneCP5_13TeV-powheg-pythia8/",
-                  "WplusJets" : "WplusJetsToMuNu_H2ErratumFix_TuneCP5_13TeV-powhegMiNNLO-pythia8-photos/",
-                  "WminusJets" : "WminusJetsToMuNu_H2ErratumFix_TuneCP5_13TeV-powhegMiNNLO-pythia8-photos/",
-                  "ZZ" : "ZZTo2L2Nu_TuneCP5_13TeV_powheg_pythia8/", 
-                  "WZ" : "WZ_TuneCP5_13TeV-pythia8/", 
-                  "WW" : "WWTo2L2Nu_TuneCP5_13TeV-powheg-pythia8" #"WW_TuneCP5_13TeV-pythia8/"
-}
-#inputdir_data = "SingleMuon/"
-#inputdir_mc   = "DYJetsToMuMu_H2ErratumFix_TuneCP5_13TeV-powhegMiNNLO-pythia8-photos/"
-#inputdir_Ztautau = "DYJetsToTauTau_M-50_AtLeastOneEorMuDecay_TuneCP5_13TeV-powhegMiNNLO-pythia8-photos/"
-#inputdir_TTSemileptonic = "TTTo2L2Nu_TuneCP5_13TeV-powheg-pythia8/"
-#inputdir_ZZ = "ZZTo2L2Nu_TuneCP5_13TeV_powheg_pythia8/"
-#inputdir_WZ = "WZ_TuneCP5_13TeV-pythia8/"
-#inputdir_WW = "WW_TuneCP5_13TeV-pythia8/"   
-
-isBkg_dict = {"data": 0, "mc": 0, "Ztautau": 1, "TTSemileptonic": 1, "TTFullyleptonic": 1, "WplusJets": 1, "WminusJets":1, "ZZ": 1, "WZ": 1, "WW": 1}
-
-
-# -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-    
 if __name__ == "__main__":    
 
     lumiDict = {"2016" : 16.8, # only postVFP
@@ -168,20 +139,6 @@ if __name__ == "__main__":
                         help='Do not execute commands, just print them')
     parser.add_argument('-r',  '--run', default="all", type=str, choices=allValidProcsAndSpecial,
                         help='Choose what to run, either data or MC, or both')
-    parser = argparse.ArgumentParser()
-    
-    parser.add_argument('-i','--indir', help='Input directory with the root files inside (common path for data and MC)',
-                        type=str, default=None, required=True)
-
-    parser.add_argument('-o','--outdir', help='Output directory to store all root files',
-    					type=str, default=None, required=True)
-
-    parser.add_argument('-d',  '--dryRun', action='store_true', help='Do not execute commands, just print them')
-
-    parser.add_argument('-r',  '--run', help='Choose what to run, either data or MC, or both',
-    					default=["all"], nargs="*",
-    					choices=["data", "mc", "stand", "bkg", "Ztautau", "TTSemileptonic", "TTFullyleptonic", "WplusJets", "WminusJets", "ZZ", "WZ", "WW", "all"])
-                    
     # FIXME: unless I change histogram names inside the files I can't merge different working points, I could just merge data with MC but not worth
     #parser.add_argument('-m',  '--merge', action='store_true',
     #                    help='Merge root files in a new one')
@@ -197,53 +154,6 @@ if __name__ == "__main__":
                         type=int, nargs='+', default=[0], choices=[-1, 0, 1])
     #parser.add_argument('-exe', '--executable', default="Steve.py", type=str, choices=["Steve.py", "Steve_tracker.py"],
     #                    help='Choose script to run')
-    #parser.add_argument('-m',  '--merge', action='store_true', help='Merge root files in a new one')
-   
-    parser.add_argument('-nw', '--noVertexPileupWeight', action='store_true', help='Do not use weights for vertex z position')
-    
-    parser.add_argument('-ngm', '--noGenMatching', action='store_true', help='Do not apply gen-matching for the probe (for non prompt bkg study)')
-    
-    parser.add_argument(        '--reverseGenMatching', action='store_true', help='Reverse the gen-matching condition for the probe (for non prompt contributions on Zmumu sample)')
-    
-    parser.add_argument("-nos", "--noOppositeCharge", action="store_true", help="Don't require opposite charges between tag and probe (including tracking, unless also using --noOppositeChargeTracking)")
-    
-    parser.add_argument(        "--noOppositeChargeTracking", action="store_true", help="Don't require opposite charges between tag and probe for tracking")
-    
-    parser.add_argument("-sc", "--SameCharge", action="store_true", help="Require the TP Pair to have same sign (fo bkg study)")
-    
-    parser.add_argument('-s', '--steps', help='Default runs all working points, but can choose only some if needed',
-    					type=int, default=None, nargs='*', choices=list(workingPoints.keys()))
-
-    parser.add_argument('-x','--exclude', help='Default runs all working points, but can choose to skip some if needed',
-    					type=int, default=None, nargs='*', choices=list(workingPoints.keys()))
-    					
-    parser.add_argument('-wpc','---workinPointsByCharge', help='These steps will be made charge dependent',
-    					type=str, default=["trigger"], nargs='*', choices=list(workingPoints.values()))
-    					
-    parser.add_argument("-trk", "--trackerMuons", action="store_true", help="Use tracker muons and a different executable")
-    
-    parser.add_argument("-p", "--eventParity", help="Select events with given parity for statistical tests, -1/1 for odd/even events, 0 for all (default)",
-                        type=int, default=[0], nargs='+', choices=[-1, 0, 1])
-              
-    parser.add_argument("-tpt", "--tagPt", help="Minimum pt to select tag muons",
-                        type=float, default=25.)
-                        
-    parser.add_argument("-tiso", "--tagIso", help="Isolation threshold to select tag muons",
-                        type=float, default=0.15)
-                        
-    parser.add_argument(		"--standaloneValidHits", help="Minimum number of valid hits for the standalone track (>= this value)",
-                        type=int, default=1)
-                        
-    # parser.add_argument('-exe', '--executable', help='Choose script to run',
-    # 					  type=str, default="Steve.py", choices=["Steve.py", "Steve_tracker.py"])
-
-    parser.add_argument("-y", "--year", help="run year 2016, 2017, 2018",
-                    	type=str, default="2016")
-                    	
-    parser.add_argument("-iso", "--isoDefinition", help="Choose between the old and new isolation definition, 0 is old, 1 is new", 
-    					type=int, default=1, choices = [0,1])
-
-
     args = parser.parse_args()
 
     # compare pt values within some tolerance
@@ -251,11 +161,11 @@ if __name__ == "__main__":
         raise IOError(f"Inconsistent values for options --histMinPt ({args.histMinPt}) and --innerTrackMinPt ({args.innerTrackMinPt}).\nThe former must not be smaller than the latter.\n")
 
     outdir = args.outdir
-    if not outdir.endswith("/"): outdir += "/"
-    
+    if not outdir.endswith("/"):
+        outdir += "/"
     indir = args.indir
-    if not indir.endswith("/"):  indir += "/"
-
+    if not indir.endswith("/"):
+        indir += "/"
 
     executable = "Steve_tracker.py" if args.trackerMuons else "Steve.py"
 
@@ -263,25 +173,11 @@ if __name__ == "__main__":
         print(f"Creating folder {outdir}")
         safeSystem(f"mkdir -p {outdir}", dryRun=False)
 
-    
     toRun = []
     for p in allValidProcs:
-        if args.run == "all" or args.run == p or (args.run == "bgk" and inputdir_dict[p]["isBkg"]) or (args.run == "stand" and p in ["data", "mc"]):
+        if args.run == "all" or args.run == p or (args.run == "bkg" and inputdir_dict[p]["isBkg"]) or (args.run == "stand" and p in ["data", "mc"]):
             toRun.append(p)
 
-    for dataset_run in args.run:
-        if dataset_run in ["all", "data","stand"]: toRun.append("data")
-        if dataset_run in ["all", "mc",  "stand"]: toRun.append("mc")
-        if dataset_run in ["all", "bkg", "Ztautau"]: 		  toRun.append("Ztautau")
-        if dataset_run in ["all", "bkg", "TTFullyleptonic"]: toRun.append("TTFullyleptonic")
-        if dataset_run in ["all", "bkg", "TTSemileptonic"]:  toRun.append("TTSemileptonic")
-        if dataset_run in ["all", "bkg", "WplusJets"]:	 toRun.append("WplusJets")
-        if dataset_run in ["all", "bkg", "WminusJets"]: toRun.append("WminusJets")
-        if dataset_run in ["all", "bkg", "ZZ"]: toRun.append("ZZ")
-        if dataset_run in ["all", "bkg", "WZ"]: toRun.append("WZ")
-        if dataset_run in ["all", "bkg", "WW"]: toRun.append("WW")
-   
-   
     outfiles = [] # store names of output files so to merge them if needed
 
     postfix = "vertexWeights{v}".format(v="0" if args.noVertexPileupWeight else "1")
@@ -289,16 +185,6 @@ if __name__ == "__main__":
         postfix += "_sscharge"
     else:
         postfix += "_oscharge{c}".format(c="0" if args.noOppositeCharge else "1")
-    
-    sign_vw = "0" if args.noVertexPileupWeight else "1"
-    sign_gm = "0" if args.noGenMatching 	   else "1"
-    if args.reverseGenMatching: 
-    	sign_gm = "-1"
-    sign_os = "0" if args.noOppositeCharge	   else "1"
-    SS_opt = "_SS" if args.SameCharge 	       else ""
-    
-    postfix = f"vertexWeights{sign_vw}_genMatching{sign_gm}_oscharge{sign_os}{SS_opt}"
-                                                    				              
 
     commonOption = f" --tagPt {args.tagPt} --tagIso {args.tagIso} --standaloneValidHits {args.standaloneValidHits}"
 
@@ -310,10 +196,6 @@ if __name__ == "__main__":
             inpath = " ".join(["{i}{f}".format(i=indir,f=x) for x in process["path"]])
         else:
             inpath = indir + process["path"]
-        
-        input_datasets = [inputdir_dict[xrun]] if type(inputdir_dict[xrun]) is str else inputdir_dict[xrun]
-        inpaths = [indir + in_path for in_path in input_datasets]
-        
         for wp in workingPoints.keys():            
             if args.exclude and wp in args.exclude:
                 continue
@@ -333,26 +215,25 @@ if __name__ == "__main__":
                     else:
                         outfile = f"{outdir}tnp_{step}_{xrun}_{postfix}.root"                        
                     outfiles.append(outfile)
-                    
-                    inpaths_cmd = ""
-                    for inpath in inpaths: 
-                        inpaths_cmd = inpaths_cmd + inpath + " "
-                    
-                    
-                    cmd = f"python {executable} -i {inpaths_cmd} -o {outfile} -d {isdata} -b {isBkg} -e {wp} -c {ch} -p {parity} -y {args.year} -iso {args.isoDefinition}"
+                    cmd = f"python {executable} -i {inpath} -o {outfile} -e {wp} -c {ch} -p {parity} -y {args.year} -iso {args.isoDefinition}"
+                    if args.maxFiles > 0:
+                        cmd += f" --maxFiles {args.maxFiles}"
+                    if xrun == "data":
+                        cmd += " --isData"
+                    else:
+                        norm = pb2fb * lumiDict[args.year] * process["xsec"]
+                        cmd += f" --normFactor {norm}"
+                        if process["isBkg"]:
+                            cmd += " -b"
+                        if not args.normalizeMCsumGenWeights:
+                            cmd += " --noNormalizeMCsumGenWeights"
                     cmd += commonOption
                     if args.noVertexPileupWeight:
                         cmd += " -nw"
-                    if args.noGenMatching:
-                    	cmd += " -ngm"
-                    if args.reverseGenMatching:
-                    	cmd += " --reverseGenMatching"
                     if args.noOppositeCharge:
                         cmd += " -nos"
                     if wp in [2, 9] and not args.noOppositeChargeTracking:
                         cmd += " --oppositeChargeTracking "
-                    if args.noOppositeChargeTracking and wp == 2:
-                        cmd += " --noOppositeChargeTracking"
                     if args.SameCharge:
                         cmd += " --SameCharge"
                     # pt customization options

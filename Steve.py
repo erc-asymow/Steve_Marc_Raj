@@ -32,7 +32,13 @@ def makeAndSaveOneHist(d, histo_name, histo_title, binning_mass, binning_pt, bin
 
 def makeAndSaveHistograms(d, histo_name, histo_title, binning_mass, binning_pt, binning_eta, massVar="TPmass", scaleFactor=1.0):
 
-    makeAndSaveOneHist(d, histo_name, histo_title, binning_mass, binning_pt, binning_eta, massVar, isPass=True, scaleFactor=scaleFactor)
+    if "dR_SA_gen" in d.GetColumnNames():
+        model_deltaR = ROOT.RDF.TH1DModel(f"dR", f"dR(probe,gen)", 320, 0, 5.5)
+        deltaR_hist = d.Histo1D(model_deltaR, "dR_SA_gen")
+        print(deltaR_hist.Integral())
+        deltaR_hist.Write()
+
+    makeAndSaveOneHist(d, histo_name, histo_title, binning_mass, binning_pt, binning_eta, massVar, isPass=True, scaleFactor=scaleFactor)    
     makeAndSaveOneHist(d, histo_name, histo_title, binning_mass, binning_pt, binning_eta, massVar, isPass=False, scaleFactor=scaleFactor)    
 
 
@@ -395,11 +401,12 @@ if(args.efficiency == 1):
 #Global|MergedStandAloneMuon ("tracking" efficiency)
 elif (args.efficiency == 2):
     if not (args.genLevelEfficiency):
-        if(args.isData):
-            d = d.Define("isGenMatchedMergedStandMuon","createTrues(nMergedStandAloneMuon)")
+        if (args.noGenMatching or args.isData==1) and not args.reverseGenMatching:
+            d = d.Define("isGenMatchedMergedStandMuon", "createTrues(nMergedStandAloneMuon)")
         else:
-            d = d.Define("isGenMatchedMergedStandMuon","hasGenMatch(GenMuonBare_eta, GenMuonBare_phi, MergedStandAloneMuon_eta, MergedStandAloneMuon_phi, 0.3)")
-            d = d.Define("GenMatchedIdx","GenMatchedIdx(GenMuonBare_eta, GenMuonBare_phi, MergedStandAloneMuon_eta, MergedStandAloneMuon_phi, 0.3)")
+            genMatchCut = 0.3 if not args.reverseGenMatching else -0.3
+            d = d.Define("isGenMatchedMergedStandMuon", f"hasGenMatch(GenMuonBare_eta, GenMuonBare_phi, MergedStandAloneMuon_eta, MergedStandAloneMuon_phi, {genMatchCut})")
+            d = d.Define("GenMatchedIdx", f"GenMatchedIdx(GenMuonBare_eta, GenMuonBare_phi, MergedStandAloneMuon_eta, MergedStandAloneMuon_phi, {genMatchCut})")
 
         # All probes, standalone muons from MergedStandAloneMuon_XX    
         d = d.Define("Probe_MergedStandMuons",f"MergedStandAloneMuon_pt > {minStandalonePt} && abs(MergedStandAloneMuon_eta) < 2.4 && isGenMatchedMergedStandMuon && MergedStandAloneMuon_numberOfValidHits >= {minStandaloneNumberOfValidHits}")
@@ -461,7 +468,15 @@ elif (args.efficiency == 2):
         d = d.Define("TPmass_fail",    "TPmass[failCondition]")
         d = d.Define("Probe_pt_fail",  "Probe_pt[failCondition]")
         d = d.Define("Probe_eta_fail", "Probe_eta[failCondition]")
-        
+
+
+
+        ####
+        if not args.isData==1:
+            d = d.Define("dR_SA_gen", "coll1coll2DR(Probe_eta, Probe_phi, GenMuonBare_eta, GenMuonBare_phi)")
+            d = d.Define("dR_SA_gen_fail", "dR_SA_gen[failCondition]")
+        ####
+
         normFactor = args.normFactor
         scale = 1.0 if args.isData else (normFactor/weightSum.GetValue()) if args.normalizeMCsumGenWeights else normFactor
         makeAndSaveHistograms(d, histo_name, "Tracking", binning_mass, binning_pt, binning_eta, scaleFactor=scale)

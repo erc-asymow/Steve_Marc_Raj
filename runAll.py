@@ -112,9 +112,12 @@ if __name__ == "__main__":
                      "Ztautau": { "path" : "DYJetsToTauTau_M-50_AtLeastOneEorMuDecay_TuneCP5_13TeV-powhegMiNNLO-pythia8-photos/",
                                    "isBkg" : 1,
                                    "xsec" : xsec_ZmmPostVFP*Z_TAU_TO_LEP_RATIO},
-                     "TTSemileptonic": {"path" : "TTTo2L2Nu_TuneCP5_13TeV-powheg-pythia8/",
+                     "TTFullyleptonic": {"path" : "TTTo2L2Nu_TuneCP5_13TeV-powheg-pythia8/",
                                         "isBkg" : 1,
                                         "xsec" : 88.29},
+                     "TTSemileptonic" : {"path" : "TTToSemiLeptonic_TuneCP5_13TeV-powheg-pythia8/",
+                                        "isBkg" : 1,
+                                        "xsec" : 366.34},
                      "ZZ": {"path" : "ZZTo2L2Nu_TuneCP5_13TeV_powheg_pythia8/",
                             "isBkg" : 1,
                             "xsec" : 0.60},
@@ -124,6 +127,15 @@ if __name__ == "__main__":
                      "WW": {"path" : "WW_TuneCP5_13TeV-pythia8/",
                             "isBkg" : 1,
                             "xsec" : 118.7}, # this value might be incorrect
+                     "WplusJets" : {"path" : "WplusJetsToMuNu_H2ErratumFix_TuneCP5_13TeV-powhegMiNNLO-pythia8-photos/",
+                                    "isBkg" : 1,
+                                    "xsec" : xsec_WpmunuPostVFP},
+                    "WminusJets" : {"path" : "WminusJetsToMuNu_H2ErratumFix_TuneCP5_13TeV-powhegMiNNLO-pythia8-photos/",
+                                    "isBkg" : 1,
+                                    "xsec" : xsec_WmmunuPostVFP},
+                    "QCD": {"path" : "QCD_Pt-20_MuEnrichedPt15_TuneCP5_13TeV-pythia8/",
+                            "isBkg" : 1,
+                            "xsec" : 238800}
                     }
 
     allValidProcs = list(inputdir_dict.keys())

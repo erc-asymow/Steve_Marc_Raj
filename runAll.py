@@ -80,6 +80,8 @@ def common_parser():
                         type=float, default=10)
     parser.add_argument("--standaloneMinPt", help="Minimum value for the standalone muon pt cut",
                         type=float, default=15)
+    parser.add_argument("--useGenMatchForBkg", action="store_true",
+                        help="Use standard gen matching cut while running on backgrounds")
 
 
     return parser
@@ -103,10 +105,10 @@ if __name__ == "__main__":
     inputdir_dict = {"data": {"path" : "SingleMuon/",
                               "isBkg": 0,
                               "xsec" : 1.0}, # dummy, just for consistency with other processes
-                     "mc": {"path" : ["DYJetsToMuMu_H2ErratumFix_TuneCP5_13TeV-powhegMiNNLO-pythia8-photos/", "DYJetsToMuMu_H2ErratumFix_PDFExt_TuneCP5_13TeV-powhegMiNNLO-pythia8-photos"],
+                     "mc": {"path" : ["DYJetsToMuMu_H2ErratumFix_TuneCP5_13TeV-powhegMiNNLO-pythia8-photos/", "DYJetsToMuMu_H2ErratumFix_PDFExt_TuneCP5_13TeV-powhegMiNNLO-pythia8-photos/"],
                             "isBkg" : 0,
                             "xsec" : xsec_ZmmPostVFP},
-                     "DYlowMass": {"path" : ["DYJetsToMuMu_M-10to50_H2ErratumFix_TuneCP5_13TeV-powhegMiNNLO-pythia8-photos"], # "DYJetsToMuMu_M-10to50_H2ErratumFix_TuneCP5_13TeV-powhegMiNNLO-pythia8-photos_ext1"],
+                     "DYlowMass": {"path" : ["DYJetsToMuMu_M-10to50_H2ErratumFix_TuneCP5_13TeV-powhegMiNNLO-pythia8-photos/"], # "DYJetsToMuMu_M-10to50_H2ErratumFix_TuneCP5_13TeV-powhegMiNNLO-pythia8-photos_ext1"],
                                    "isBkg" : 1,
                                    "xsec" : xsec_ZmmMass10to50PostVFP},
                      "Ztautau": { "path" : "DYJetsToTauTau_M-50_AtLeastOneEorMuDecay_TuneCP5_13TeV-powhegMiNNLO-pythia8-photos/",
@@ -130,12 +132,15 @@ if __name__ == "__main__":
                      "WplusJets" : {"path" : "WplusJetsToMuNu_H2ErratumFix_TuneCP5_13TeV-powhegMiNNLO-pythia8-photos/",
                                     "isBkg" : 1,
                                     "xsec" : xsec_WpmunuPostVFP},
-                    "WminusJets" : {"path" : "WminusJetsToMuNu_H2ErratumFix_TuneCP5_13TeV-powhegMiNNLO-pythia8-photos/",
-                                    "isBkg" : 1,
-                                    "xsec" : xsec_WmmunuPostVFP},
-                    "QCD": {"path" : "QCD_Pt-20_MuEnrichedPt15_TuneCP5_13TeV-pythia8/",
+                     "WminusJets" : {"path" : "WminusJetsToMuNu_H2ErratumFix_TuneCP5_13TeV-powhegMiNNLO-pythia8-photos/",
+                                     "isBkg" : 1,
+                                     "xsec" : xsec_WmmunuPostVFP},
+                     "Zjets" : {"path" : ["DYJetsToMuMu_H2ErratumFix_TuneCP5_13TeV-powhegMiNNLO-pythia8-photos/", "DYJetsToMuMu_H2ErratumFix_PDFExt_TuneCP5_13TeV-powhegMiNNLO-pythia8-photos"],
                             "isBkg" : 1,
-                            "xsec" : 238800}
+                            "xsec" : xsec_ZmmPostVFP},
+                     "QCD": {"path" : "QCD_Pt-20_MuEnrichedPt15_TuneCP5_13TeV-pythia8/",
+                             "isBkg" : 1,
+                             "xsec" : 238800}
                     }
 
     allValidProcs = list(inputdir_dict.keys())
@@ -237,6 +242,11 @@ if __name__ == "__main__":
                         cmd += f" --normFactor {norm}"
                         if process["isBkg"]:
                             cmd += " -b"
+                            if not args.useGenMatchForBkg:
+                                gmCut_str = "-1" if xrun=="Zjets" else "0"
+                                cmd += f" --genMatchCut {gmCut_str}"
+                            else:
+                                cmd += f" --genMatchCut 1"
                         if not args.normalizeMCsumGenWeights:
                             cmd += " --noNormalizeMCsumGenWeights"
                     cmd += commonOption

@@ -396,7 +396,7 @@ RVec<Bool_t> hasGenMatch(RVec<Float_t> &Gen_eta, RVec<Float_t> &Gen_phi,
             mcmatch_tmp_dr = tmpDR;
         } 
     }
-    if (mcmatch_tmp_dr < coneDR) matchMC = true;
+    if ( (coneDR>0 && mcmatch_tmp_dr<coneDR) || (coneDR<0 && mcmatch_tmp_dr>-coneDR) ) matchMC = true;
     isGenMatched.push_back(matchMC);
   }
   return isGenMatched;
@@ -417,7 +417,7 @@ RVec<Int_t> GenMatchedIdx(RVec<Float_t> &GenPart_eta,RVec<Float_t> &GenPart_phi,
                 matchIdx=iGen;
             } 
         }
-        if (mcmatch_tmp_dr < coneDR) isGenMatched[iCand] = matchIdx;
+        if ( (coneDR>0 && mcmatch_tmp_dr<coneDR) || (coneDR<0 && mcmatch_tmp_dr>-coneDR) ) isGenMatched[iCand] = matchIdx;
         else isGenMatched[iCand] = -1;
     }
     return isGenMatched;

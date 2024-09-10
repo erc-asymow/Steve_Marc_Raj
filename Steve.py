@@ -32,9 +32,9 @@ def makeAndSaveOneHist(d, histo_name, histo_title, binning_mass, binning_pt, bin
 
 def makeAndSaveHistograms(d, histo_name, histo_title, binning_mass, binning_pt, binning_eta, massVar="TPmass", scaleFactor=1.0):
 
-    if "dR_SA_gen" in d.GetColumnNames():
+    if "dR_probe_gen" in d.GetColumnNames():
         model_deltaR = ROOT.RDF.TH1DModel(f"dR", f"dR(probe,gen)", 320, 0, 5.5)
-        deltaR_hist = d.Histo1D(model_deltaR, "dR_SA_gen")
+        deltaR_hist = d.Histo1D(model_deltaR, "dR_probe_gen")
         print(deltaR_hist.Integral())
         deltaR_hist.Write()
 
@@ -369,14 +369,17 @@ if args.efficiency==1:
         d = d.Define("TPPairs", f"All_TPPairs[{massCut} && {ZdiffCut}]")
         d = d.Define("TPmass",  f"All_TPmass[{massCut}  && {ZdiffCut}]")
 
-        d = d.Define("Probe_pt",   "getVariables(TPPairs, Track_pt,  2)")
-        d = d.Define("Probe_eta",  "getVariables(TPPairs, Track_eta, 2)")
+        d = d.Define("Probe_pt",  "getVariables(TPPairs, Track_pt,  2)")
+        d = d.Define("Probe_eta", "getVariables(TPPairs, Track_eta, 2)")
+        d = d.Define("Probe_phi", "getVariables(TPPairs, Track_phi, 2)")
+        
         d = d.Define("passCondition", "getVariables(TPPairs, passCondition_reco, 2)")
         d = d.Define("failCondition", "!passCondition")
 
         if (args.tnpGenLevel):
-            d = d.Redefine("Probe_pt","getGenVariables(TPPairs,GenMatchedIdx,GenMuonBare_pt,2)")
-            d = d.Redefine("Probe_eta","getGenVariables(TPPairs,GenMatchedIdx,GenMuonBare_eta,2)")
+            d = d.Redefine("Probe_pt",  "getGenVariables(TPPairs, GenMatchedIdx, GenMuonBare_pt,  2)")
+            d = d.Redefine("Probe_eta", "getGenVariables(TPPairs, GenMatchedIdx, GenMuonBare_eta, 2)")
+            d = d.Redefine("Probe_phi", "getGenVariables(TPPairs, GenMatchedIdx, GenMuonBare_phi, 2)")
         
         d = d.Define("Probe_pt_pass",  "Probe_pt[passCondition]")
         d = d.Define("Probe_eta_pass", "Probe_eta[passCondition]")
@@ -386,7 +389,7 @@ if args.efficiency==1:
         d = d.Define("TPmass_fail", "TPmass[failCondition]")
 
         if not args.isData:  #saving the distribution of the dR between the gen muon and the probe, to have an a-posteriori check of the choice
-            d = d.Define("dR_SA_gen", "coll1coll2DR(Probe_eta, Probe_phi, GenMuonBare_eta, GenMuonBare_phi)")
+            d = d.Define("dR_probe_gen", "coll1coll2DR(Probe_eta, Probe_phi, GenMuonBare_eta, GenMuonBare_phi)")
 
         normFactor = args.normFactor
         scale = 1.0 if args.isData else (normFactor/weightSum.GetValue()) if args.normalizeMCsumGenWeights else normFactor
@@ -431,10 +434,12 @@ elif args.efficiency==2:
 
         d = d.Define("Probe_pt",  "getVariables(TPPairs, MergedStandAloneMuon_pt,  2)")
         d = d.Define("Probe_eta", "getVariables(TPPairs, MergedStandAloneMuon_eta, 2)")
+        d = d.Define("Probe_phi", "getVariables(TPPairs, MergedStandAloneMuon_phi, 2)")
 
         if (args.tnpGenLevel):
-            d = d.Redefine("Probe_pt","getGenVariables(TPPairs,GenMatchedIdx,GenMuonBare_pt,2)")
-            d = d.Redefine("Probe_eta","getGenVariables(TPPairs,GenMatchedIdx,GenMuonBare_eta,2)")
+            d = d.Redefine("Probe_pt",  "getGenVariables(TPPairs, GenMatchedIdx, GenMuonBare_pt,  2)")
+            d = d.Redefine("Probe_eta", "getGenVariables(TPPairs, GenMatchedIdx, GenMuonBare_eta, 2)")
+            d = d.Redefine("Probe_eta", "getGenVariables(TPPairs, GenMatchedIdx, GenMuonBare_phi, 2)")
 
         # condition for passing probe, start from Muon_XX and then add match of extraID indices between Muon and MergedStandAloneMuon
         #d = d.Define("Muon_standaloneNvalidHits", "getGlobalMuon_MergedStandAloneMuonVar(Muon_standaloneExtraIdx, MergedStandAloneMuon_extraIdx, MergedStandAloneMuon_numberOfValidHits)")
@@ -478,7 +483,7 @@ elif args.efficiency==2:
         d = d.Define("Probe_eta_fail", "Probe_eta[failCondition]")
 
         if not args.isData:  #saving the distribution of the dR between the gen muon and the probe, to have an a-posteriori check of the choice
-            d = d.Define("dR_SA_gen", "coll1coll2DR(Probe_eta, Probe_phi, GenMuonBare_eta, GenMuonBare_phi)")
+            d = d.Define("dR_probe_gen", "coll1coll2DR(Probe_eta, Probe_phi, GenMuonBare_eta, GenMuonBare_phi)")
 
         normFactor = args.normFactor
         scale = 1.0 if args.isData else (normFactor/weightSum.GetValue()) if args.normalizeMCsumGenWeights else normFactor

@@ -80,10 +80,12 @@ def common_parser():
                         type=float, default=10)
     parser.add_argument("--standaloneMinPt", help="Minimum value for the standalone muon pt cut",
                         type=float, default=15)
+    parser.add_argument("--useGenMatchForBkg", action="store_true",
+                        help="Use standard gen matching cut while running on backgrounds")
 
-    
+
     return parser
-        
+
 if __name__ == "__main__":    
 
     lumiDict = {"2016" : 16.8, # only postVFP
@@ -103,18 +105,21 @@ if __name__ == "__main__":
     inputdir_dict = {"data": {"path" : "SingleMuon/",
                               "isBkg": 0,
                               "xsec" : 1.0}, # dummy, just for consistency with other processes
-                     "mc": {"path" : ["DYJetsToMuMu_H2ErratumFix_TuneCP5_13TeV-powhegMiNNLO-pythia8-photos/", "DYJetsToMuMu_H2ErratumFix_PDFExt_TuneCP5_13TeV-powhegMiNNLO-pythia8-photos"],
+                     "mc": {"path" : ["DYJetsToMuMu_H2ErratumFix_TuneCP5_13TeV-powhegMiNNLO-pythia8-photos/", "DYJetsToMuMu_H2ErratumFix_PDFExt_TuneCP5_13TeV-powhegMiNNLO-pythia8-photos/"],
                             "isBkg" : 0,
                             "xsec" : xsec_ZmmPostVFP},
-                     "DYlowMass": {"path" : ["DYJetsToMuMu_M-10to50_H2ErratumFix_TuneCP5_13TeV-powhegMiNNLO-pythia8-photos"], # "DYJetsToMuMu_M-10to50_H2ErratumFix_TuneCP5_13TeV-powhegMiNNLO-pythia8-photos_ext1"],
+                     "DYlowMass": {"path" : ["DYJetsToMuMu_M-10to50_H2ErratumFix_TuneCP5_13TeV-powhegMiNNLO-pythia8-photos/"], # "DYJetsToMuMu_M-10to50_H2ErratumFix_TuneCP5_13TeV-powhegMiNNLO-pythia8-photos_ext1"],
                                    "isBkg" : 1,
                                    "xsec" : xsec_ZmmMass10to50PostVFP},
                      "Ztautau": { "path" : "DYJetsToTauTau_M-50_AtLeastOneEorMuDecay_TuneCP5_13TeV-powhegMiNNLO-pythia8-photos/",
                                    "isBkg" : 1,
                                    "xsec" : xsec_ZmmPostVFP*Z_TAU_TO_LEP_RATIO},
-                     "TTSemileptonic": {"path" : "TTTo2L2Nu_TuneCP5_13TeV-powheg-pythia8/",
+                     "TTFullyleptonic": {"path" : "TTTo2L2Nu_TuneCP5_13TeV-powheg-pythia8/",
                                         "isBkg" : 1,
                                         "xsec" : 88.29},
+                     "TTSemileptonic" : {"path" : "TTToSemiLeptonic_TuneCP5_13TeV-powheg-pythia8/",
+                                        "isBkg" : 1,
+                                        "xsec" : 366.34},
                      "ZZ": {"path" : "ZZTo2L2Nu_TuneCP5_13TeV_powheg_pythia8/",
                             "isBkg" : 1,
                             "xsec" : 0.60},
@@ -124,6 +129,18 @@ if __name__ == "__main__":
                      "WW": {"path" : "WW_TuneCP5_13TeV-pythia8/",
                             "isBkg" : 1,
                             "xsec" : 118.7}, # this value might be incorrect
+                     "WplusJets" : {"path" : "WplusJetsToMuNu_H2ErratumFix_TuneCP5_13TeV-powhegMiNNLO-pythia8-photos/",
+                                    "isBkg" : 1,
+                                    "xsec" : xsec_WpmunuPostVFP},
+                     "WminusJets" : {"path" : "WminusJetsToMuNu_H2ErratumFix_TuneCP5_13TeV-powhegMiNNLO-pythia8-photos/",
+                                     "isBkg" : 1,
+                                     "xsec" : xsec_WmmunuPostVFP},
+                     "Zjets" : {"path" : ["DYJetsToMuMu_H2ErratumFix_TuneCP5_13TeV-powhegMiNNLO-pythia8-photos/", "DYJetsToMuMu_H2ErratumFix_PDFExt_TuneCP5_13TeV-powhegMiNNLO-pythia8-photos"],
+                            "isBkg" : 1,
+                            "xsec" : xsec_ZmmPostVFP},
+                     "QCD": {"path" : "QCD_Pt-20_MuEnrichedPt15_TuneCP5_13TeV-pythia8/",
+                             "isBkg" : 1,
+                             "xsec" : 238800}
                     }
 
     allValidProcs = list(inputdir_dict.keys())
@@ -175,7 +192,7 @@ if __name__ == "__main__":
 
     toRun = []
     for p in allValidProcs:
-        if args.run == "all" or args.run == p or (args.run == "bgk" and inputdir_dict[p]["isBkg"]) or (args.run == "stand" and p in ["data", "mc"]):
+        if args.run == "all" or args.run == p or (args.run == "bkg" and inputdir_dict[p]["isBkg"]) or (args.run == "stand" and p in ["data", "mc"]):
             toRun.append(p)
 
     outfiles = [] # store names of output files so to merge them if needed
@@ -217,7 +234,7 @@ if __name__ == "__main__":
                     outfiles.append(outfile)
                     cmd = f"python {executable} -i {inpath} -o {outfile} -e {wp} -c {ch} -p {parity} -y {args.year} -iso {args.isoDefinition}"
                     if args.maxFiles > 0:
-                        cmd += f" --maxFiles {maxFiles}"
+                        cmd += f" --maxFiles {args.maxFiles}"
                     if xrun == "data":
                         cmd += " --isData"
                     else:
@@ -225,6 +242,11 @@ if __name__ == "__main__":
                         cmd += f" --normFactor {norm}"
                         if process["isBkg"]:
                             cmd += " -b"
+                            if not args.useGenMatchForBkg:
+                                gmCut_str = "-1" if xrun=="Zjets" else "0"
+                                cmd += f" --genMatchCut {gmCut_str}"
+                            else:
+                                cmd += f" --genMatchCut 1"
                         if not args.normalizeMCsumGenWeights:
                             cmd += " --noNormalizeMCsumGenWeights"
                     cmd += commonOption

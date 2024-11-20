@@ -787,9 +787,34 @@ elif args.efficiency < 9:
         d = d.Define("Probe_u_fail",        "BasicProbe_u[failCondition]")
         d = d.Define("Probe_charge_fail",   "BasicProbe_charge[failCondition]")
 
-        normFactor = args.normFactor
-        scale = 1.0 if args.isData else (normFactor/weightSum.GetValue()) if args.normalizeMCsumGenWeights else normFactor
-        makeAndSaveHistograms(d, histo_name, "IsolationNoTrigger", binning_mass, binning_pt, binning_eta, scaleFactor=scale)
+        if (args.zqtprojection):
+            if not (args.genLevelEfficiency):
+                model_pass_iso = ROOT.RDF.THnDModel("pass_mu_"+histo_name, "IsolationNoTrigger_pass", 5, NBIN, XBINS)
+                model_fail_iso = ROOT.RDF.THnDModel("fail_mu_"+histo_name, "IsolationNoTrigger_fail", 5, NBIN, XBINS)
+                strings_pass = ROOT.std.vector('string')()
+                strings_pass.emplace_back("TPmass_pass")
+                strings_pass.emplace_back("Probe_pt_pass")
+                strings_pass.emplace_back("Probe_eta_pass")
+                strings_pass.emplace_back("Probe_charge_pass")
+                strings_pass.emplace_back("Probe_u_pass")
+                strings_pass.emplace_back("weight")
+                strings_fail = ROOT.std.vector('string')()
+                strings_fail.emplace_back("TPmass_fail")
+                strings_fail.emplace_back("Probe_pt_fail")
+                strings_fail.emplace_back("Probe_eta_fail")
+                strings_fail.emplace_back("Probe_charge_fail")
+                strings_fail.emplace_back("Probe_u_fail")
+                strings_fail.emplace_back("weight")
+     
+                pass_histogram_iso = d.HistoND(model_pass_iso,strings_pass)
+                fail_histogram_iso = d.HistoND(model_fail_iso,strings_fail)
+
+                ROOT.saveHistograms(pass_histogram_iso,fail_histogram_iso,ROOT.std.string(args.output_file))
+	else:
+	    if not (args.genLevelEfficiency):
+                normFactor = args.normFactor
+                scale = 1.0 if args.isData else (normFactor/weightSum.GetValue()) if args.normalizeMCsumGenWeights else normFactor
+                makeAndSaveHistograms(d, histo_name, "IsolationNoTrigger", binning_mass, binning_pt, binning_eta, scaleFactor=scale)
 
     ##For Isolation Failing Trigger
 

@@ -810,8 +810,8 @@ elif args.efficiency < 9:
                 fail_histogram_iso = d.HistoND(model_fail_iso,strings_fail)
 
                 ROOT.saveHistograms(pass_histogram_iso,fail_histogram_iso,ROOT.std.string(args.output_file))
-	else:
-	    if not (args.genLevelEfficiency):
+        else:
+            if not (args.genLevelEfficiency):
                 normFactor = args.normFactor
                 scale = 1.0 if args.isData else (normFactor/weightSum.GetValue()) if args.normalizeMCsumGenWeights else normFactor
                 makeAndSaveHistograms(d, histo_name, "IsolationNoTrigger", binning_mass, binning_pt, binning_eta, scaleFactor=scale)

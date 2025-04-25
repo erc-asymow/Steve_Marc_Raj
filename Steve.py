@@ -93,7 +93,7 @@ parser.add_argument("-p","--eventParity", help="Select events with given parity 
 
 parser.add_argument("-zqt","--zqtprojection", action="store_true", help="Efficiencies evaluated as a function of zqtprojection (only for trigger and isolation)")
 
-parser.add_argument("-gen","--genLevelEfficiency", action="store_true", help="Compute MC truth efficiency")
+parser.add_argument("-gen","--genLevelEfficiency", action="store_true", help="Compute MC truth efficiency. This needs to be cross-checked as there might be bugs or missing updates.")
 
 parser.add_argument("-tpg","--tnpGenLevel", action="store_true", help="Compute tag-and-probe efficiencies for MC as a function of postVFP gen variables")
 
@@ -203,12 +203,13 @@ else:
     d = d.Define("gen_weight", "clipGenWeight(genWeight)") #for now (testing)
 weightSum = d.Sum("gen_weight")
 
-##General Cuts
-d = d.Filter("PV_npvsGood >= 1","NVtx Cut")
-if(args.year == "2016"):
-    d = d.Filter("HLT_IsoMu24 || HLT_IsoTkMu24", "HLT Cut")
-else:
-    d = d.Filter("HLT_IsoMu24", "HLT Cut")
+if not args.genLevelEfficiency:
+    ##General Cuts
+    d = d.Filter("PV_npvsGood >= 1","NVtx Cut")
+    if(args.year == "2016"):
+        d = d.Filter("HLT_IsoMu24 || HLT_IsoTkMu24", "HLT Cut")
+    else:
+        d = d.Filter("HLT_IsoMu24", "HLT Cut")
 
 # for statistical tests (postfix to be added to file name)
 if args.eventParity < 0:
@@ -309,7 +310,8 @@ if args.efficiency in [2, 9] and args.charge:
 # now define the tag muon (Muon_isGlobal might not be necessary, but shouldn't hurt really)
 d = d.Define("Tag_Muons", f"Muon_pt > {args.tagPt} && abs(Muon_eta) < 2.4 && Muon_pfRelIso04_all < {args.tagIso} && abs(Muon_dxybs) < 0.05 && Muon_mediumId && Muon_isGlobal && isTriggeredMuon && isGenMatchedMuon {TagAntiChargeCut}")
 
-d = d.Filter("Sum(Tag_Muons) > 0") # would this make the loop a little faster?
+if not args.genLevelEfficiency:
+    d = d.Filter("Sum(Tag_Muons) > 0") # would this make the loop a little faster?
 
 if (args.genLevelEfficiency):
     d = d.DefinePerSample("zero","0").DefinePerSample("one","1")
@@ -321,6 +323,14 @@ if (args.genLevelEfficiency):
     d = d.Define("goodgencharge","goodgencharge(GenPart_postFSRLepIdx1,GenPart_postFSRLepIdx2,GenPart_eta,GenPart_phi,GenPart_status,GenPart_pdgId)")
     d = d.Define("goodgenidx","goodgenidx(GenPart_pt,GenPart_postFSRLepIdx1,GenPart_postFSRLepIdx2,GenPart_eta,GenPart_phi,GenPart_status,GenPart_pdgId)")
     d = d.Define("postFSRgenzqtprojection","postFSRgenzqtprojection(goodgenpt,goodgeneta,goodgenphi)")
+    if args.charge:
+        sign= ">" if args.charge > 0 else "<"
+        d = d.Redefine("goodgenpt",f"goodgenpt[goodgencharge {sign} 0]")
+        d = d.Redefine("goodgeneta",f"goodgeneta[goodgencharge {sign} 0]")
+        d = d.Redefine("goodgenphi",f"goodgenphi[goodgencharge {sign} 0]")
+        d = d.Redefine("goodgenidx",f"goodgenidx[goodgencharge {sign} 0]")
+        d = d.Redefine("postFSRgenzqtprojection",f"postFSRgenzqtprojection[goodgencharge {sign} 0]")
+        d = d.Redefine("goodgencharge",f"goodgencharge[goodgencharge {sign} 0]")
     # this might be done simply as
     # d = d.Define("goodgenpt", "GenMuonBare_pt") # the collection might have more than 2 elements here, but can be easily filtered (should be sorted too)
 
@@ -396,7 +406,7 @@ if args.efficiency==1:
         makeAndSaveHistograms(d, histo_name, "Reco", binning_mass, binning_pt, binning_eta, scaleFactor=scale)
 
     else:
-        d = d.Define("goodmuon","goodmuonreco(goodgeneta,goodgenphi,MergedStandAloneMuon_pt,MergedStandAloneMuon_eta,MergedStandAloneMuon_phi)").Define("newweight","weight*goodmuon")
+        d = d.Define("goodmuon","trackStandaloneDR(goodgeneta, goodgenphi, MergedStandAloneMuon_eta[goodStandaloneMuon], MergedStandAloneMuon_phi[goodStandaloneMuon]) < 0.3").Define("newweight","weight*goodmuon")
 
         model_pass_reco = ROOT.RDF.TH2DModel("Pass","",len(binning_eta)-1,binning_eta,len(binning_pt)-1,binning_pt)
         model_norm_reco = ROOT.RDF.TH2DModel("Norm","",len(binning_eta)-1,binning_eta,len(binning_pt)-1,binning_pt)
@@ -498,7 +508,10 @@ elif args.efficiency==2:
                            massVar="TPmassFromSA", isPass=True, scaleFactor=scale)
         
     else:
-        d = d.Define("goodmuon","goodmuonglobal(goodgeneta,goodgenphi,Muon_pt,Muon_eta,Muon_phi,Muon_isGlobal,Muon_standalonePt,Muon_standaloneEta,Muon_standalonePhi)").Define("newweight","weight*goodmuon")
+        d = d.Define("Muon_standaloneNvalidHits", "getGlobalMuon_MergedStandAloneMuonVar(Muon_standaloneExtraIdx, MergedStandAloneMuon_extraIdx, MergedStandAloneMuon_numberOfValidHits)")
+        d = d.Define("passHasHits",f"Muon_standaloneNvalidHits >= {minStandaloneNumberOfValidHits}")
+        d = d.Define("Muon_forTrackingWithHits","Muon_forTracking && passHasHits")
+        d = d.Define("goodmuon","trackStandaloneDR(goodgeneta, goodgenphi, Muon_eta[Muon_forTrackingWithHits], Muon_phi[Muon_forTrackingWithHits]) < 0.3").Define("newweight","weight*goodmuon")
 
         model_pass_reco = ROOT.RDF.TH2DModel("Pass","",len(binning_eta)-1,binning_eta,len(binning_pt)-1,binning_pt)
         model_norm_reco = ROOT.RDF.TH2DModel("Norm","",len(binning_eta)-1,binning_eta,len(binning_pt)-1,binning_pt)
@@ -583,7 +596,12 @@ elif args.efficiency < 9:
             scale = 1.0 if args.isData else (normFactor/weightSum.GetValue()) if args.normalizeMCsumGenWeights else normFactor
             makeAndSaveHistograms(d, histo_name, "IDIP", binning_mass, binning_pt, binning_eta, scaleFactor=scale)
         else:
-            d = d.Define("goodmuon","goodmuonglobal(goodgeneta,goodgenphi,Muon_pt,Muon_eta,Muon_phi,Muon_isGlobal,Muon_standalonePt,Muon_standaloneEta,Muon_standalonePhi,Muon_dxybs,Muon_mediumId)")
+            d = d.Define("Muon_forTracking", f"Muon_isGlobal && Muon_pt > {minInnerTrackPt} && Muon_standalonePt > {minStandalonePt} && selfDeltaR(Muon_eta, Muon_phi, Muon_standaloneEta, Muon_standalonePhi) < 0.3 && Muon_highPurity")
+            d = d.Define("Muon_standaloneNvalidHits", "getGlobalMuon_MergedStandAloneMuonVar(Muon_standaloneExtraIdx, MergedStandAloneMuon_extraIdx, MergedStandAloneMuon_numberOfValidHits)")
+            d = d.Define("passHasHits",f"Muon_standaloneNvalidHits >= {minStandaloneNumberOfValidHits}")
+            d = d.Define("Muon_forTrackingWithHits","Muon_forTracking && passHasHits")
+            d = d.Define("Muon_forIDIP", "Muon_forTrackingWithHits && passCondition_IDIP")
+            d = d.Define("goodmuon","trackStandaloneDR(goodgeneta, goodgenphi, Muon_eta[Muon_forIDIP], Muon_phi[Muon_forIDIP]) < 0.3")
             d = d.Define("newweight","weight*goodmuon")
 
             model_pass_reco = ROOT.RDF.TH2DModel("Pass","",len(binning_eta)-1,binning_eta,len(binning_pt)-1,binning_pt)
@@ -656,8 +674,13 @@ elif args.efficiency < 9:
                 strings_norm.emplace_back("postFSRgenzqtprojection")
                 strings_norm.emplace_back("weight")
 
-                d = d.Define("goodmuon","goodmuontrigger(goodgeneta,goodgenphi,Muon_pt,Muon_eta,Muon_phi,Muon_isGlobal,Muon_standalonePt,Muon_standaloneEta,Muon_standalonePhi,Muon_dxybs,Muon_mediumId,isTriggeredMuon)").Define("newweight","weight*goodmuon")
-
+                d = d.Define("Muon_forTracking", f"Muon_isGlobal && Muon_pt > {minInnerTrackPt} && Muon_standalonePt > {minStandalonePt} && selfDeltaR(Muon_eta, Muon_phi, Muon_standaloneEta, Muon_standalonePhi) < 0.3 && Muon_highPurity")
+                d = d.Define("Muon_standaloneNvalidHits", "getGlobalMuon_MergedStandAloneMuonVar(Muon_standaloneExtraIdx, MergedStandAloneMuon_extraIdx, MergedStandAloneMuon_numberOfValidHits)")
+                d = d.Define("passHasHits",f"Muon_standaloneNvalidHits >= {minStandaloneNumberOfValidHits}")
+                d = d.Define("Muon_forTrackingWithHits","Muon_forTracking && passHasHits")
+                d = d.Define("Muon_forTrigger", "Muon_forTrackingWithHits && passCondition_IDIP && passCondition_Trig")
+                d = d.Define("goodmuon","trackStandaloneDR(goodgeneta, goodgenphi, Muon_eta[Muon_forTrigger], Muon_phi[Muon_forTrigger]) < 0.3")
+                d = d.Define("newweight","weight*goodmuon")
                 pass_histogram_reco = d.Filter("goodgenpt.size()>=2").HistoND(model_pass_trig,strings_pass)
                 pass_histogram_norm = d.Filter("goodgenpt.size()>=2").HistoND(model_norm_trig,strings_norm)
 
@@ -670,8 +693,13 @@ elif args.efficiency < 9:
                 scale = 1.0 if args.isData else (normFactor/weightSum.GetValue()) if args.normalizeMCsumGenWeights else normFactor
                 makeAndSaveHistograms(d, histo_name, "Trigger", binning_mass, binning_pt, binning_eta, scaleFactor=scale)
             else:
-                d = d.Define("goodmuon","goodmuontrigger(goodgeneta,goodgenphi,Muon_pt,Muon_eta,Muon_phi,Muon_isGlobal,Muon_standalonePt,Muon_standaloneEta,Muon_standalonePhi,Muon_dxybs,Muon_mediumId,isTriggeredMuon)").Define("newweight","weight*goodmuon")
-
+                d = d.Define("Muon_forTracking", f"Muon_isGlobal && Muon_pt > {minInnerTrackPt} && Muon_standalonePt > {minStandalonePt} && selfDeltaR(Muon_eta, Muon_phi, Muon_standaloneEta, Muon_standalonePhi) < 0.3 && Muon_highPurity")
+                d = d.Define("Muon_standaloneNvalidHits", "getGlobalMuon_MergedStandAloneMuonVar(Muon_standaloneExtraIdx, MergedStandAloneMuon_extraIdx, MergedStandAloneMuon_numberOfValidHits)")
+                d = d.Define("passHasHits",f"Muon_standaloneNvalidHits >= {minStandaloneNumberOfValidHits}")
+                d = d.Define("Muon_forTrackingWithHits","Muon_forTracking && passHasHits")
+                d = d.Define("Muon_forTrigger", "Muon_forTrackingWithHits && passCondition_IDIP && passCondition_Trig")
+                d = d.Define("goodmuon","trackStandaloneDR(goodgeneta, goodgenphi, Muon_eta[Muon_forTrigger], Muon_phi[Muon_forTrigger]) < 0.3")
+                d = d.Define("newweight","weight*goodmuon")
                 model_pass_reco = ROOT.RDF.TH2DModel("Pass","",len(binning_eta)-1,binning_eta,len(binning_pt)-1,binning_pt)
                 model_norm_reco = ROOT.RDF.TH2DModel("Norm","",len(binning_eta)-1,binning_eta,len(binning_pt)-1,binning_pt)
 
@@ -742,8 +770,13 @@ elif args.efficiency < 9:
                 strings_norm.emplace_back("postFSRgenzqtprojection")
                 strings_norm.emplace_back("weight")
 
-                d = d.Define("goodmuon","goodmuonisolation(goodgeneta,goodgenphi,Muon_pt,Muon_eta,Muon_phi,Muon_isGlobal,Muon_standalonePt,Muon_standaloneEta,Muon_standalonePhi,Muon_dxybs,Muon_mediumId,isTriggeredMuon,Muon_pfRelIso04_all)").Define("newweight","weight*goodmuon")
-
+                d = d.Define("Muon_forTracking", f"Muon_isGlobal && Muon_pt > {minInnerTrackPt} && Muon_standalonePt > {minStandalonePt} && selfDeltaR(Muon_eta, Muon_phi, Muon_standaloneEta, Muon_standalonePhi) < 0.3 && Muon_highPurity")
+                d = d.Define("Muon_standaloneNvalidHits", "getGlobalMuon_MergedStandAloneMuonVar(Muon_standaloneExtraIdx, MergedStandAloneMuon_extraIdx, MergedStandAloneMuon_numberOfValidHits)")
+                d = d.Define("passHasHits",f"Muon_standaloneNvalidHits >= {minStandaloneNumberOfValidHits}")
+                d = d.Define("Muon_forTrackingWithHits","Muon_forTracking && passHasHits")
+                d = d.Define("Muon_forIso", "Muon_forTrackingWithHits && passCondition_IDIP && passCondition_Trig && passCondition_Iso")
+                d = d.Define("goodmuon","trackStandaloneDR(goodgeneta, goodgenphi, Muon_eta[Muon_forIso], Muon_phi[Muon_forIso]) < 0.3")
+                d = d.Define("newweight","weight*goodmuon")
                 pass_histogram_reco = d.Filter("goodgenpt.size()>=2").HistoND(model_pass_trig,strings_pass)
                 pass_histogram_norm = d.Filter("goodgenpt.size()>=2").HistoND(model_norm_trig,strings_norm)
 
@@ -755,8 +788,13 @@ elif args.efficiency < 9:
                 scale = 1.0 if args.isData else (normFactor/weightSum.GetValue()) if args.normalizeMCsumGenWeights else normFactor
                 makeAndSaveHistograms(d, histo_name, "Isolation", binning_mass, binning_pt, binning_eta, scaleFactor=scale)
             else:
-                d = d.Define("goodmuon","goodmuonisolation(goodgeneta,goodgenphi,Muon_pt,Muon_eta,Muon_phi,Muon_isGlobal,Muon_standalonePt,Muon_standaloneEta,Muon_standalonePhi,Muon_dxybs,Muon_mediumId,isTriggeredMuon,Muon_pfRelIso04_all)").Define("newweight","weight*goodmuon")
-
+                d = d.Define("Muon_forTracking", f"Muon_isGlobal && Muon_pt > {minInnerTrackPt} && Muon_standalonePt > {minStandalonePt} && selfDeltaR(Muon_eta, Muon_phi, Muon_standaloneEta, Muon_standalonePhi) < 0.3 && Muon_highPurity")
+                d = d.Define("Muon_standaloneNvalidHits", "getGlobalMuon_MergedStandAloneMuonVar(Muon_standaloneExtraIdx, MergedStandAloneMuon_extraIdx, MergedStandAloneMuon_numberOfValidHits)")
+                d = d.Define("passHasHits",f"Muon_standaloneNvalidHits >= {minStandaloneNumberOfValidHits}")
+                d = d.Define("Muon_forTrackingWithHits","Muon_forTracking && passHasHits")
+                d = d.Define("Muon_forIso", "Muon_forTrackingWithHits && passCondition_IDIP && passCondition_Trig && passCondition_Iso")
+                d = d.Define("goodmuon","trackStandaloneDR(goodgeneta, goodgenphi, Muon_eta[Muon_forIso], Muon_phi[Muon_forIso]) < 0.3")
+                d = d.Define("newweight","weight*goodmuon")
                 model_pass_reco = ROOT.RDF.TH2DModel("Pass","",len(binning_eta)-1,binning_eta,len(binning_pt)-1,binning_pt)
                 model_norm_reco = ROOT.RDF.TH2DModel("Norm","",len(binning_eta)-1,binning_eta,len(binning_pt)-1,binning_pt)
 
@@ -810,11 +848,55 @@ elif args.efficiency < 9:
                 fail_histogram_iso = d.HistoND(model_fail_iso,strings_fail)
 
                 ROOT.saveHistograms(pass_histogram_iso,fail_histogram_iso,ROOT.std.string(args.output_file))
+            else:
+                model_pass_trig = ROOT.RDF.THnDModel("pass_mu_"+histo_name, "IsolationNoTrigger_pass", 4, GENNBIN, GENXBINS)
+                model_norm_trig = ROOT.RDF.THnDModel("norm_mu_"+histo_name, "IsolationNoTrigger_norm", 4, GENNBIN, GENXBINS)
+                strings_pass = ROOT.std.vector('string')()
+                strings_pass.emplace_back("goodgenpt")
+                strings_pass.emplace_back("goodgeneta")
+                strings_pass.emplace_back("goodgencharge")
+                strings_pass.emplace_back("postFSRgenzqtprojection")
+                strings_pass.emplace_back("newweight")
+                strings_norm = ROOT.std.vector('string')()
+                strings_norm.emplace_back("goodgenpt")
+                strings_norm.emplace_back("goodgeneta")
+                strings_norm.emplace_back("goodgencharge")
+                strings_norm.emplace_back("postFSRgenzqtprojection")
+                strings_norm.emplace_back("weight")
+
+                d = d.Define("Muon_forTracking", f"Muon_isGlobal && Muon_pt > {minInnerTrackPt} && Muon_standalonePt > {minStandalonePt} && selfDeltaR(Muon_eta, Muon_phi, Muon_standaloneEta, Muon_standalonePhi) < 0.3 && Muon_highPurity")
+                d = d.Define("Muon_standaloneNvalidHits", "getGlobalMuon_MergedStandAloneMuonVar(Muon_standaloneExtraIdx, MergedStandAloneMuon_extraIdx, MergedStandAloneMuon_numberOfValidHits)")
+                d = d.Define("passHasHits",f"Muon_standaloneNvalidHits >= {minStandaloneNumberOfValidHits}")
+                d = d.Define("Muon_forTrackingWithHits","Muon_forTracking && passHasHits")
+                d = d.Define("Muon_forIsoNoTrig", "Muon_forTrackingWithHits && passCondition_IDIP && passCondition_Iso")
+                d = d.Define("goodmuon","trackStandaloneDR(goodgeneta, goodgenphi, Muon_eta[Muon_forIsoNoTrig], Muon_phi[Muon_forIsoNoTrig]) < 0.3")
+                d = d.Define("newweight","weight*goodmuon")
+                pass_histogram_reco = d.Filter("goodgenpt.size()>=2").HistoND(model_pass_trig,strings_pass)
+                pass_histogram_norm = d.Filter("goodgenpt.size()>=2").HistoND(model_norm_trig,strings_norm)
+
+                ROOT.saveHistogramsGen(pass_histogram_reco,pass_histogram_norm,ROOT.std.string(args.output_file))
+
         else:
             if not (args.genLevelEfficiency):
                 normFactor = args.normFactor
                 scale = 1.0 if args.isData else (normFactor/weightSum.GetValue()) if args.normalizeMCsumGenWeights else normFactor
                 makeAndSaveHistograms(d, histo_name, "IsolationNoTrigger", binning_mass, binning_pt, binning_eta, scaleFactor=scale)
+            else:
+                d = d.Define("Muon_forTracking", f"Muon_isGlobal && Muon_pt > {minInnerTrackPt} && Muon_standalonePt > {minStandalonePt} && selfDeltaR(Muon_eta, Muon_phi, Muon_standaloneEta, Muon_standalonePhi) < 0.3 && Muon_highPurity")
+                d = d.Define("Muon_standaloneNvalidHits", "getGlobalMuon_MergedStandAloneMuonVar(Muon_standaloneExtraIdx, MergedStandAloneMuon_extraIdx, MergedStandAloneMuon_numberOfValidHits)")
+                d = d.Define("passHasHits",f"Muon_standaloneNvalidHits >= {minStandaloneNumberOfValidHits}")
+                d = d.Define("Muon_forTrackingWithHits","Muon_forTracking && passHasHits")
+                d = d.Define("Muon_forIsoNoTrig", "Muon_forTrackingWithHits && passCondition_IDIP && passCondition_Iso")
+                d = d.Define("goodmuon","trackStandaloneDR(goodgeneta, goodgenphi, Muon_eta[Muon_forIsoNoTrig], Muon_phi[Muon_forIsoNoTrig]) < 0.3")
+                d = d.Define("newweight","weight*goodmuon")
+                model_pass_reco = ROOT.RDF.TH2DModel("Pass","",len(binning_eta)-1,binning_eta,len(binning_pt)-1,binning_pt)
+                model_norm_reco = ROOT.RDF.TH2DModel("Norm","",len(binning_eta)-1,binning_eta,len(binning_pt)-1,binning_pt)
+
+                pass_histogram_reco = d.Histo2D(model_pass_reco,"goodgeneta","goodgenpt","newweight")
+                pass_histogram_norm = d.Histo2D(model_norm_reco,"goodgeneta","goodgenpt","weight")
+
+                pass_histogram_reco.Write()
+                pass_histogram_norm.Write()
 
     ##For Isolation Failing Trigger
 
@@ -840,8 +922,8 @@ elif args.efficiency < 9:
 
         if (args.zqtprojection):
             if not (args.genLevelEfficiency):
-                model_pass_iso = ROOT.RDF.THnDModel("pass_mu_"+histo_name, "Isolation_pass", 5, NBIN, XBINS)
-                model_fail_iso = ROOT.RDF.THnDModel("fail_mu_"+histo_name, "Isolation_fail", 5, NBIN, XBINS)
+                model_pass_iso = ROOT.RDF.THnDModel("pass_mu_"+histo_name, "IsolationFailingTrigger_pass", 5, NBIN, XBINS)
+                model_fail_iso = ROOT.RDF.THnDModel("fail_mu_"+histo_name, "IsolationFailingTrigger_fail", 5, NBIN, XBINS)
                 strings_pass = ROOT.std.vector('string')()
                 strings_pass.emplace_back("TPmass_pass")
                 strings_pass.emplace_back("Probe_pt_pass")
@@ -861,45 +943,12 @@ elif args.efficiency < 9:
                 fail_histogram_iso = d.HistoND(model_fail_iso,strings_fail)
 
                 ROOT.saveHistograms(pass_histogram_iso,fail_histogram_iso,ROOT.std.string(args.output_file))
-            else:
-                model_pass_trig = ROOT.RDF.THnDModel("pass_mu_"+histo_name, "Isolation_pass", 4, GENNBIN, GENXBINS)
-                model_norm_trig = ROOT.RDF.THnDModel("norm_mu_"+histo_name, "Isolation_norm", 4, GENNBIN, GENXBINS)
-                strings_pass = ROOT.std.vector('string')()
-                strings_pass.emplace_back("goodgenpt")
-                strings_pass.emplace_back("goodgeneta")
-                strings_pass.emplace_back("goodgencharge")
-                strings_pass.emplace_back("postFSRgenzqtprojection")
-                strings_pass.emplace_back("newweight")
-                strings_norm = ROOT.std.vector('string')()
-                strings_norm.emplace_back("goodgenpt")
-                strings_norm.emplace_back("goodgeneta")
-                strings_norm.emplace_back("goodgencharge")
-                strings_norm.emplace_back("postFSRgenzqtprojection")
-                strings_norm.emplace_back("weight")
-
-                d = d.Define("goodmuon","goodmuonisolation(goodgeneta,goodgenphi,Muon_pt,Muon_eta,Muon_phi,Muon_isGlobal,Muon_standalonePt,Muon_standaloneEta,Muon_standalonePhi,Muon_dxybs,Muon_mediumId,isTriggeredMuon,Muon_pfRelIso04_all)").Define("newweight","weight*goodmuon")
-
-                pass_histogram_reco = d.Filter("goodgenpt.size()>=2").HistoND(model_pass_trig,strings_pass)
-                pass_histogram_norm = d.Filter("goodgenpt.size()>=2").HistoND(model_norm_trig,strings_norm)
-
-                ROOT.saveHistogramsGen(pass_histogram_reco,pass_histogram_norm,ROOT.std.string(args.output_file))
 
         else:
             if not (args.genLevelEfficiency):
                 normFactor = args.normFactor
                 scale = 1.0 if args.isData else (normFactor/weightSum.GetValue()) if args.normalizeMCsumGenWeights else normFactor
                 makeAndSaveHistograms(d, histo_name, "Isolation", binning_mass, binning_pt, binning_eta, scaleFactor=scale)
-            else:
-                d = d.Define("goodmuon","goodmuonisolation(goodgeneta,goodgenphi,Muon_pt,Muon_eta,Muon_phi,Muon_isGlobal,Muon_standalonePt,Muon_standaloneEta,Muon_standalonePhi,Muon_dxybs,Muon_mediumId,isTriggeredMuon,Muon_pfRelIso04_all)").Define("newweight","weight*goodmuon")
-
-                model_pass_reco = ROOT.RDF.TH2DModel("Pass","",len(binning_eta)-1,binning_eta,len(binning_pt)-1,binning_pt)
-                model_norm_reco = ROOT.RDF.TH2DModel("Norm","",len(binning_eta)-1,binning_eta,len(binning_pt)-1,binning_pt)
-
-                pass_histogram_reco = d.Histo2D(model_pass_reco,"goodgeneta","goodgenpt","newweight")
-                pass_histogram_norm = d.Histo2D(model_norm_reco,"goodgeneta","goodgenpt","weight")
-
-                pass_histogram_reco.Write()
-                pass_histogram_norm.Write()
 
     # For veto (loose ID+dxybs<0.05)
     if (args.efficiency == 8):
@@ -915,9 +964,16 @@ elif args.efficiency < 9:
             d = d.Define("Probe_pt_fail",  "BasicProbe_pt[failCondition]")
             d = d.Define("Probe_eta_fail", "BasicProbe_eta[failCondition]")
             d = d.Define("TPmass_fail",    "BasicTPmass[failCondition]")
-            makeAndSaveHistograms(d, histo_name, "newVeto", binning_mass, binning_pt, binning_eta)
+            normFactor = args.normFactor
+            scale = 1.0 if args.isData else (normFactor/weightSum.GetValue()) if args.normalizeMCsumGenWeights else normFactor
+            makeAndSaveHistograms(d, histo_name, "newVeto", binning_mass, binning_pt, binning_eta, scaleFactor=scale)
         else:
-            d = d.Define("goodmuon","goodmuonglobal(goodgeneta,goodgenphi,Muon_pt,Muon_eta,Muon_phi,Muon_isGlobal,Muon_standalonePt,Muon_standaloneEta,Muon_standalonePhi,Muon_dxybs,Muon_mediumId)")
+            d = d.Define("Muon_forTracking", f"Muon_isGlobal && Muon_pt > {minInnerTrackPt} && Muon_standalonePt > {minStandalonePt} && selfDeltaR(Muon_eta, Muon_phi, Muon_standaloneEta, Muon_standalonePhi) < 0.3 && Muon_highPurity")
+            d = d.Define("Muon_standaloneNvalidHits", "getGlobalMuon_MergedStandAloneMuonVar(Muon_standaloneExtraIdx, MergedStandAloneMuon_extraIdx, MergedStandAloneMuon_numberOfValidHits)")
+            d = d.Define("passHasHits",f"Muon_standaloneNvalidHits >= {minStandaloneNumberOfValidHits}")
+            d = d.Define("Muon_forTrackingWithHits","Muon_forTracking && passHasHits")
+            d = d.Define("Muon_forVeto", "Muon_forTrackingWithHits && passCondition_veto")
+            d = d.Define("goodmuon","trackStandaloneDR(goodgeneta, goodgenphi, Muon_eta[Muon_forVeto], Muon_phi[Muon_forVeto]) < 0.3")
             d = d.Define("newweight","weight*goodmuon")
 
             model_pass_reco = ROOT.RDF.TH2DModel("Pass","",len(binning_eta)-1,binning_eta,len(binning_pt)-1,binning_pt)
@@ -1121,9 +1177,24 @@ elif args.efficiency == 11:
     d = d.Define("Probe_eta_fail", "BasicProbe_eta[failCondition]")
     d = d.Define("TPmass_fail",    "BasicTPmass[failCondition]")
 
-    normFactor = args.normFactor
-    scale = 1.0 if args.isData else (normFactor/weightSum.GetValue()) if args.normalizeMCsumGenWeights else normFactor
-    makeAndSaveHistograms(d, histo_name, "IDIP", binning_mass, binning_pt, binning_eta, scaleFactor=scale)
+    if not args.genLevelEfficiency:
+        normFactor = args.normFactor
+        scale = 1.0 if args.isData else (normFactor/weightSum.GetValue()) if args.normalizeMCsumGenWeights else normFactor
+        makeAndSaveHistograms(d, histo_name, "Veto", binning_mass, binning_pt, binning_eta, scaleFactor=scale)
+    else:
+        d = d.Define("Muon_forVeto", "Muon_pt > {minInnerTrackPt} && Muon_highPurity && (Muon_isGoodGlobal || Muon_isGoodTracker) && passCondition_veto")
+        d = d.Define("goodmuon","trackStandaloneDR(goodgeneta, goodgenphi, Muon_eta[Muon_forVeto], Muon_phi[Muon_forVeto]) < 0.3")
+        d = d.Define("newweight","weight*goodmuon")
+
+        model_pass_reco = ROOT.RDF.TH2DModel("Pass","",len(binning_eta)-1,binning_eta,len(binning_pt)-1,binning_pt)
+        model_norm_reco = ROOT.RDF.TH2DModel("Norm","",len(binning_eta)-1,binning_eta,len(binning_pt)-1,binning_pt)
+
+        pass_histogram_reco = d.Histo2D(model_pass_reco,"goodgeneta","goodgenpt","newweight")
+        pass_histogram_norm = d.Histo2D(model_norm_reco,"goodgeneta","goodgenpt","weight")
+
+        pass_histogram_reco.Write()
+        pass_histogram_norm.Write()
+
 
 #######
 #######

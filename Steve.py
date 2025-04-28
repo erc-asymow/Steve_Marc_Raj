@@ -449,7 +449,7 @@ elif args.efficiency==2:
         if (args.tnpGenLevel):
             d = d.Redefine("Probe_pt",  "getGenVariables(TPPairs, GenMatchedIdx, GenMuonBare_pt,  2)")
             d = d.Redefine("Probe_eta", "getGenVariables(TPPairs, GenMatchedIdx, GenMuonBare_eta, 2)")
-            d = d.Redefine("Probe_eta", "getGenVariables(TPPairs, GenMatchedIdx, GenMuonBare_phi, 2)")
+            d = d.Redefine("Probe_phi", "getGenVariables(TPPairs, GenMatchedIdx, GenMuonBare_phi, 2)")
 
         # condition for passing probe, start from Muon_XX and then add match of extraID indices between Muon and MergedStandAloneMuon
         #d = d.Define("Muon_standaloneNvalidHits", "getGlobalMuon_MergedStandAloneMuonVar(Muon_standaloneExtraIdx, MergedStandAloneMuon_extraIdx, MergedStandAloneMuon_numberOfValidHits)")

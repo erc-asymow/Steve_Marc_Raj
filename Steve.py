@@ -234,7 +234,7 @@ if (args.isData):
     elif (args.year == "2018"):
         jsonhelper = make_jsonhelper("utility/Cert_314472-325175_13TeV_UL2018_Collisions18_HLT_IsoMu24_v_CustomJSON.txt")
     elif (args.year == "2017"):
-	jsonhelper = make_jsonhelper("utility/Cert_294927-306462_13TeV_UL2017_Collisions17_HLT_IsoMu24_v_CustomJSON.txt")
+        jsonhelper = make_jsonhelper("utility/Cert_294927-306462_13TeV_UL2017_Collisions17_HLT_IsoMu24_v_CustomJSON.txt")
     d = d.Filter(jsonhelper,["run","luminosityBlock"],"jsonfilter")
 
 ## Weights
